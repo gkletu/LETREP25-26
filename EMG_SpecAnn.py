@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+#from scipy.signal import find_peaks
 import os
 
 def select_and_load_csv(file_path):
@@ -29,10 +30,16 @@ def select_and_load_csv(file_path):
     L = np.arange(1, int(np.floor(n / 2)))
 
     # Band-pass filter
-    low_cut, high_cut = 20, 80
+    low_cut, high_cut = 20, 75
     band_mask = (np.abs(freq) >= low_cut) & (np.abs(freq) <= high_cut)
     fhat_filtered = fhat * band_mask
     y_filtered = np.fft.ifft(fhat_filtered)
+
+    # Rectify the filtered signal (take absolute value)
+    y_rectified = np.abs(y_filtered.real)
+
+    # Find peaks of rectified signal
+    #peaks,_ = find_peaks(y_rectified, height = 0.005, distance = 0.001)
 
     # --- Plot ---
     fig, axs = plt.subplots(3, 1, figsize=(10, 8))
@@ -40,24 +47,25 @@ def select_and_load_csv(file_path):
 
     # Time domain
     axs[0].plot(t, y, label="Original", color="b")
-    axs[0].set_title("Time Domain Signal")
-    axs[0].set_xlabel("Time (s)")
-    axs[0].set_ylabel("Amplitude (mV)")
+    axs[0].set_title("Time Domain Signal", fontsize = 10)
+    axs[0].set_xlabel("Time (s)", fontsize = 10)
+    axs[0].set_ylabel("Amplitude (mV)", fontsize = 10)
     axs[0].legend()
 
     # Frequency domain
-    axs[1].plot(freq[L], np.abs(PSD[L]), color="orange", label="Power Spectrum")
-    axs[1].set_title("Frequency Domain")
-    axs[1].set_xlabel("Frequency (Hz)")
-    axs[1].set_ylabel("Magnitude")
+    axs[1].plot(freq[L], np.abs(PSD[L]), color="orange", Label="Power Spectral Density")
+    axs[1].set_title("Frequency Domain", fontsize = 10)
+    axs[1].set_xlabel("Frequency (Hz)", fontsize = 10)
+    axs[1].set_ylabel("Magnitude", fontsize = 10)
     axs[1].set_xlim(0, sampling_rate / 2)
     axs[1].legend()
 
     # Filtered signal
-    axs[2].plot(t, y_filtered.real, color="k", label="Filtered")
-    axs[2].set_title("Filtered Signal (20–80 Hz)")
-    axs[2].set_xlabel("Time (s)")
-    axs[2].set_ylabel("Amplitude (mV)")
+    axs[2].plot(t, y_rectified.real, color="k", label="Filtered")
+   # axs[2].plot(t[peaks], y_rectified[peaks], color="red", label="Peaks")
+    axs[2].set_title("Rectified Filtered Signal (20–75 Hz)", fontsize = 10)
+    axs[2].set_xlabel("Time (s)", fontsize = 10)
+    axs[2].set_ylabel("Amplitude (mV)", fontsize = 10)
     axs[2].legend()
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
