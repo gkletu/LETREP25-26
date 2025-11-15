@@ -8,21 +8,20 @@ First, it establishes a connection with the EMG sensors"""
 import sys
 
 # Import the *correct* class names
-from AeroPy.DataManager import DataManager  # <-- FIX 1: The class is DataManager
+from AeroPy.DataManager import DataKernel  # <-- FIX 1: The class is DataKernel
 from AeroPy.TrignoBase import TrignoBase
 
 # --- This is the correct 3-step setup ---
 
-# Step 1: Create the DataManager.
-# We pass 'None' for the plot object.
-dataHandler = DataManager(None)  # <-- FIX 2: Use DataManager
+# Step 1: Create the TrignoBase *first*, but pass 'None' for the handler.
+base = TrignoBase(None)
 
-# Step 2: Create the TrignoBase and give it the handler.
-base = TrignoBase(dataHandler)
+# Step 2: Create the DataKernel and pass it the 'base' object.
+# This works now because 'base' is not None.
+dataHandler = DataKernel(base)
 
-# Step 3: Complete the circular dependency.
-# Tell the DataManager's DataKernel about the 'base' object.
-dataHandler.DataKernel.TrigBase = base
+# Step 3: Complete the circle by setting the handler on the 'base' object.
+base.collection_data_handler = dataHandler
 
 # --- Your original logic, corrected ---
 
