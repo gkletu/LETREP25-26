@@ -1,6 +1,7 @@
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
-
+import matplotlib.pyplot as plt
+import os
 import numpy as np
 import pandas
 
@@ -46,4 +47,8 @@ else:
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
 
+file_name = os.path.basename(file_path)
+file_name = "scaled_" + file_name 
+print(file_name)
 plt.plot(averaged_scaling)
+plt.show()
