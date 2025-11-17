@@ -47,8 +47,11 @@ else:
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
 
-file_name = os.path.basename(file_path)
-file_name = "scaled_" + file_name 
-print(file_name)
+
 plt.plot(averaged_scaling)
 plt.show()
+
+# Generating a filename for scaled data
+file_name = os.path.basename(file_path)
+file_name = "scaled_" + file_name 
+np.savetxt(file_name, averaged_scaling, delimiter=',', fmt='%d')
