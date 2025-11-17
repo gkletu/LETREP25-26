@@ -45,3 +45,5 @@ else:
         print(f"Columns available are: {my_data.columns.tolist()}")
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
+
+plt.plot(averaged_scaling)
