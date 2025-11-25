@@ -6,6 +6,7 @@
 First, it establishes a connection with the EMG sensors"""
 
 import sys
+import tkinter as tk
 
 # Import the *correct* class names
 from AeroPy.DataManager import DataKernel  # <-- FIX 1: The class is DataKernel
@@ -33,5 +34,32 @@ print("Connecting to base...")
 base.Connect_Callback()
 print("Connection complete.")
 
-# You can now use 'base' to do things
-# base.Scan_Callback()
+
+# function to pair sensors
+def pair_sensors():
+    base.PairSensors(True)
+    sensor_number = tkSimpleDialog.askinteger(
+        title="Pair a Sensor", prompt="Enter the sensor number:"
+    )
+    base.PairSensor(sensor_number)
+
+
+# function to scan for previously paired sensors
+def scan_sensors():
+    base.ScanSensors()
+
+
+# Now we're going to build a GUI
+window = tk.Tk()
+window.title("LETREP26 Pair EMGs...")
+window.geometry("960 x 540")
+
+# Pair Sensors Button
+pair_button = tk.Button(master=window, text="Pair Sensors", command=pair_sensors)
+pair_button.pack()
+
+# Scan Sensors Button
+scan_button = tk.Button(master=window, text="Scan for Sensors", command=scan_sensors)
+scan_button.pack()
+
+window.mainloop()
