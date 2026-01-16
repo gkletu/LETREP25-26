@@ -4,6 +4,8 @@ import pandas as pd
 #from scipy.signal import find_peaks
 import os
 
+# This is a change for github
+
 def select_and_load_csv(file_path):
     """
     Loads a CSV file, performs FFT, filters, and returns a Matplotlib Figure.
