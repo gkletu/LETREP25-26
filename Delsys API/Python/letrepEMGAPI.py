@@ -50,7 +50,7 @@ def scan_sensors():
 
 # function to initiate data collection
 def start_collect():
-    base.Configure(start trigger = False, stoptrigger = False) # configures the sensor for data collection. we don't need triggering
+    base.Configure(starttrigger = False, stoptrigger = False) # configures the sensor for data collection. we don't need triggering
     if base.IsPipelineConfigured():
         base.Start(ytdata = True) # starts data collection ytdata enables time stamps
 
@@ -60,7 +60,6 @@ def stop_collect():
     data = base.PollYTData()
     return data
   
-
 # Now we're going to build a GUI
 window = tk.Tk()
 window.title("LETREP26 Pair EMGs...")
@@ -73,5 +72,13 @@ pair_button.pack()
 # Scan Sensors Button
 scan_button = tk.Button(master=window, text="Scan for Sensors", command=scan_sensors)
 scan_button.pack()
+
+# Start Collect Button
+collect_button = tk.Button(master=window, text="Start Collection", command=start_collect)
+collect_button.pack()
+
+# Stop Collect Button
+stop_button = tk.Button(master=window, text="Stop Collection", command=stop_collect)
+stop_button.pack()
 
 window.mainloop()
