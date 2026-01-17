@@ -366,7 +366,7 @@ class ParticipantApp:
             fg=COLORS['text_primary'],
             activebackground=COLORS['purple_active'],
             activeforeground=COLORS['text_secondary'],
-            command=api.pair_sensors()
+            command=api.pair_sensors
         ).grid(row=0, column=0, padx=10, pady=5)
 
         # Scan Sensors Button
@@ -378,7 +378,7 @@ class ParticipantApp:
             fg=COLORS['text_primary'],
             activebackground=COLORS['blue_active'],
             activeforeground=COLORS['text_secondary'],
-            command=api.scan_sensors()
+            command=api.scan_sensors
         ).grid(row=0, column=1, padx=10, pady=5)
 
         # Exit API Button (no EMG Pairing)
