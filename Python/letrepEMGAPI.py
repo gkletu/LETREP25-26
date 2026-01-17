@@ -37,11 +37,11 @@ print("Connection complete.")
 
 # function to pair sensors
 def pair_sensors():
-    base.PairSensors(True)
+    TrigBase.PairSensors(True)
     sensor_number = tkSimpleDialog.askinteger(
         title="Pair a Sensor", prompt="Enter the sensor number:"
     )
-    base.PairSensor(sensor_number)
+    TrigBase.PairSensor(sensor_number)
 
 
 # function to scan for previously paired sensors
@@ -63,7 +63,7 @@ def stop_collect():
 # Now we're going to build a GUI
 window = tk.Tk()
 window.title("LETREP26 Pair EMGs...")
-window.geometry("960 x 540")
+window.geometry("960x540")
 
 # Pair Sensors Button
 pair_button = tk.Button(master=window, text="Pair Sensors", command=pair_sensors)
