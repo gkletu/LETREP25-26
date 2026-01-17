@@ -6,7 +6,10 @@
 First, it establishes a connection with the EMG sensors"""
 
 import sys
+import time
 import tkinter as tk
+from tkinter import simpledialog
+import pandas as pd
 
 # Import the *correct* class names
 from AeroPy.DataManager import DataKernel  # <-- FIX 1: The class is DataKernel
@@ -37,28 +40,46 @@ print("Connection complete.")
 
 # function to pair sensors
 def pair_sensors():
-    TrigBase.PairSensors(True)
-    sensor_number = tkSimpleDialog.askinteger(
-        title="Pair a Sensor", prompt="Enter the sensor number:"
+    
+    sensor_number = simpledialog.askinteger(
+        title="Pair a Sensor",
+        prompt="Enter the sensor number (1-16):",
+        parent=window
     )
+    TrigBase.PairSensor(True)
     TrigBase.PairSensor(sensor_number)
 
 
 # function to scan for previously paired sensors
 def scan_sensors():
-    base.ScanSensors()
+    TrigBase.ScanSensors()
 
 # function to initiate data collection
-def start_collect():
-    base.Configure(starttrigger = False, stoptrigger = False) # configures the sensor for data collection. we don't need triggering
-    if base.IsPipelineConfigured():
-        base.Start(ytdata = True) # starts data collection ytdata enables time stamps
+def start_collect(): 
+    TrigBase.SelectAllSensors() 
+    TrigBase.Configure(starttrigger=False, stoptrigger=False) 
+    # wait up to 2 seconds for pipeline to arm 
+    t0 = time.time() 
+    while not TrigBase.IsPipelineConfigured() and time.time() - t0 < 2.0: 
+        time.sleep(0.02) 
+    if TrigBase.IsPipelineConfigured(): 
+        TrigBase.Start(ytdata=True) 
+        print("Collection started") 
+    else: 
+        print("Pipeline failed to arm; state:", TrigBase.GetPipelineState())
 
 # function to stop data collection
-def stop_collect():
-    base.Stop()
-    data = base.PollYTData()
-    return data
+def stop_collect(): # give the pipeline a short moment to produce packets 
+    time.sleep(0.15) 
+    net = TrigBase.PollYTData() 
+    TrigBase.Stop() 
+    
+    # convert .NET ValueTuple to DataFrame (concise and robust) 
+    df = pd.DataFrame([(str(k), s.Item1, s.Item2) for k in net.Keys for s in net[k]], columns=["guid", "time", "value"]) 
+    df.to_csv("data.csv", index=False)
+    window.last_df = df 
+    return df
+
   
 # Now we're going to build a GUI
 window = tk.Tk()
