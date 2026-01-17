@@ -48,6 +48,18 @@ def pair_sensors():
 def scan_sensors():
     base.ScanSensors()
 
+# function to initiate data collection
+def start_collect():
+    base.Configure(start trigger = False, stoptrigger = False) # configures the sensor for data collection. we don't need triggering
+    if base.IsPipelineConfigured():
+        base.Start(ytdata = True) # starts data collection ytdata enables time stamps
+
+# function to stop data collection
+def stop_collect():
+    base.Stop()
+    data = base.PollYTData()
+    return data
+  
 
 # Now we're going to build a GUI
 window = tk.Tk()
