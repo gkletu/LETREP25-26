@@ -1,89 +1,52 @@
-# ======================
-# Session Manager  !!TEMPLATE!!
-# ======================
+#Session manager: (template)
+#   use session type to determine number of trials per session.
+
+#==================
+# Imports
+#==================
 import os
 from datetime import datetime
+import ctypes
 
+# Import your API and ctype libraries
+from Python import letrepEMGAPI as api
 
 class SessionManager:
     """
-    Handles session startup logic including:
-    - File path generation
-    - Motor configuration
-    - Display configuration
+    Session control logic:
+        Motor control (ctypes)
+        Force sensor activation (ctypes)
+        EMG activation (API)
+        Dataa collection coordination (potentially)
     """
 
-    def __init__(self, data_manager):
-        """Initialize with reference to data manager."""
-        self.data_manager = data_manager
-        self.save_path = None
-        self.current_config = None
+def start_session(self, participant_id, entry_index, session):
 
-    def setup_save_path(self, participant_id, entry_index, session):
-        """Create save path and filename based on participant ID and session."""
-        base_path = self.data_manager.get_participant_folder(participant_id)
-        session_folder = os.path.join(base_path, session)
+    # determine if current is baseline session
+    is_baseline = self._is_baseline_session(session)
 
-        # Create filename with timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"Entry_{entry_index + 1}_{session}_{timestamp}.csv"
+    try:
+        if is_baseline:
+            return self._start_baseline_session(participant_id, entry_index, session)
+        else:
+            return self._start_normal_session(participant_id, entry_index, session)
+    except Exception as e:
+        return False, f"Error starting session: {e}" 
 
-        self.save_path = os.path.join(session_folder, filename)
+def _is_baseline_session(self, session):
+    # Determining key word to determine if a session should be marked as baselin
+    #EDIT LATER::::
 
-        # Ensure directory exists
-        os.makedirs(session_folder, exist_ok=True)
+def _start_baseline_session(self, participan_id, entry_index, session):
+    # setup baseline save path for EMGs and force sensor
 
-        return self.save_path
+def _start_normal_session(self, participant_id, entry_index, session):
+    # setup normal save path for EMGs and force sensor
 
-    def get_motor_config(self, entry_index):
-        """Return motor configuration based on entry type."""
-        motor_configs = {
-            0: "CONFIG_1",  # Entry 1
-            1: "CONFIG_2",  # Entry 2
-            2: "CONFIG_3",  # Entry 3
-            # Add more as needed
-        }
-
-        config = motor_configs.get(entry_index, "DEFAULT_CONFIG")
-        self.current_config = config
-        return config
-
-    def get_display_info(self, entry_index):
-        """Return display information based on entry type."""
-        display_info = {
-            0: {
-                'title': "Entry 1: Baseline Assessment",
-                'instructions': "Instructions for entry 1...",
-                'color': '#00FF00'
-            },
-            1: {
-                'title': "Entry 2: Active Testing",
-                'instructions': "Instructions for entry 2...",
-                'color': '#0000FF'
-            },
-            2: {
-                'title': "Entry 3: Recovery Phase",
-                'instructions': "Instructions for entry 3...",
-                'color': '#FF00FF'
-            },
-            # Add more as needed
-        }
-
-        return display_info.get(entry_index, {
-            'title': "Unknown Entry Type",
-            'instructions': "No instructions available",
-            'color': '#FFFFFF'
-        })
-
-    def send_motor_command(self, config):
-        """Send command to motor API."""
-        # TODO: Implement based on your API communication method
-        # Examples:
-        # - Write to a file that the API reads
-        # - Send via socket
-        # - Use subprocess to call API command
-        # - etc.
-
-        print(f"Sending motor configuration: {config}")
-        # Placeholder for actual implementation
-        pass
+def _baseline_motors(self, entry_index):
+    # call ctype for motor control (50 trials)
+    # call colection function
+    
+def _normal_motors(self, entry_index):
+    # call ctype for motor control (75 trials)
+    #call colection function
