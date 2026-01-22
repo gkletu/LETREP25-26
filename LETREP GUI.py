@@ -17,6 +17,7 @@ from EMG_SpecAnn import select_and_load_csv
 from participant_manager import ParticipantDataManager
 from login_popup import ParticipantLoginPopup
 from Python import letrepEMGAPI as api
+# from session_manager import
 
 #======================
 # Import Theme
