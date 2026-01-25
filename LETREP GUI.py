@@ -17,7 +17,7 @@ from EMG_SpecAnn import select_and_load_csv
 from participant_manager import ParticipantDataManager
 from login_popup import ParticipantLoginPopup
 from Python import letrepEMGAPI as api
-# from session_manager import
+import session_manager as sm
 
 #======================
 # Import Theme
@@ -93,16 +93,16 @@ class ParticipantApp:
         )
         button_frame.pack(padx=10, pady=10)
 
-        # Start Session button (green, depressed initially) (Currently loads .csv)
+        # Start Session button (green, depressed initially)
         self.load_btn = tk.Button(
             button_frame,
-            text="Start Session",                 # changed to session start
+            text="Start Session",                 # changed to session start (done)
             font=FONTS['button'],
             bg=COLORS['success_active'],      # depressed look
             fg=COLORS['text_primary'],
             activebackground=COLORS['success_active'],
             activeforeground=COLORS['text_primary'],
-            command=self.load_csv_file,   # Change to start function when made
+            command=self.Start_session,   # Changed from load csv function
             state=tk.DISABLED,
             width=15,
             height=2,
@@ -393,6 +393,22 @@ class ParticipantApp:
             activeforeground=COLORS['text_secondary'],
             command=window.destroy
         ).grid(row=0, column=2, padx=10, pady=5)
+
+    def Start_session(self):
+        #session determined by current_session variable
+        if not self.current_session:
+            messagebox.showwarning("No Session Type Selected","Please Select A Session Type")
+            return
+        
+        if self.current_session =="Baseline": #Uses current_session variable string to determine which session to activate
+            sm.baseline_motors
+            sm.baseline_collection
+        elif self.current_session =="Normal":
+            sm.normal_motors
+            sm.normal_collection
+        else:
+            messagebox.showerror("Error", f"Unknown session type: {self.current_session}")
+        
 
 #==========================================
 # Main entry point

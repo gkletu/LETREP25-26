@@ -80,7 +80,7 @@ def stop_collect(): # give the pipeline a short moment to produce packets
     window.last_df = df 
     return df
 
-  
+# The GUI in this file can, and should be deleted  
 # Now we're going to build a GUI
 window = tk.Tk()
 window.title("LETREP26 Pair EMGs...")

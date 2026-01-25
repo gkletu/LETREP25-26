@@ -5,12 +5,17 @@
 # Imports
 #==================
 import os
-from datetime import datetime
 import ctypes
+import time
+
+
+from datetime import datetime
+from Python import letrepEMGAPI as api
+
 
 # Import your API and ctype libraries
 from Python import letrepEMGAPI as api
-motorlibrary = ctypes.CDLL(path)
+motorlibrary = ctypes.CDLL(path)    # change "path" to file path of the ctypes
 
 def baseline_motors(entry_index):
     for i in range(49):                 #runs loop 50 times (0-49)
@@ -25,10 +30,14 @@ def normal_motors(entry_index):
 def baseline_collection(entry_index):
     for i in range(49):
         i = i+1
-        #API Thing
+        api.start_collect
+        time.sleep(0.5) # pauses function for 0.5 seconds
+        api.stop_collect
 
 def normal_collection(enty_index):
     for i in range(74):
         i = i+1
-        #API Thing
+        api.start_collect
+        time.sleep(0.5)
+        api.stop_collect
         
