@@ -16,7 +16,7 @@ from win32inetcon import API_WRITE_DATA
 from EMG_SpecAnn import select_and_load_csv
 from participant_manager import ParticipantDataManager
 from login_popup import ParticipantLoginPopup
-from Python import letrepEMGAPI as api
+#from Python import letrepEMGAPI as api
 import session_manager as sm
 
 #======================
@@ -58,7 +58,7 @@ class ParticipantApp:
         self._create_plot_frame()
 
         #--------Show login popup--------
-        self.root.after(100, self.Load_API)  #Launches API on start up
+        #self.root.after(100, self.Load_API)  #Launches API on start up
 
     #=====================================
     # UI component creation
@@ -205,7 +205,7 @@ class ParticipantApp:
             f"Entry {entry_index + 1}, {session}"
         )
 
-    def load_csv_file(self):  # Replaced with Load_API Function
+    def load_csv_file(self):  #Loads .csv replaced with start session function
         """Open file dialog, load CSV, and display plot."""
         file_path = filedialog.askopenfilename(
             title="Select CSV file",
@@ -330,69 +330,69 @@ class ParticipantApp:
 
         self.status_label.config(text=status_text)
 
-    def Load_API(self):  # Loads EMG API (change name of API file)
-        # Now we're going to build a GUI
-        window = tk.Tk()
-        window.title("LETREP26 Pair EMGs...")
-        window.geometry("960x540")
-        window.resizable(False, False)
-        window.configure(bg=COLORS['bg_main'])
-
-        # Asthetics
-        (tk.Label(
-            window,
-            text='EMG Sensor Pairing',
-            relief=tk.SUNKEN,
-            borderwidth=2,
-            font=FONTS['title'],
-            bg=COLORS['bg_frame'],
-            fg=COLORS['text_primary']
-        )
-         .pack(padx=10, pady=30, ipadx=5, ipady=5))
-
-        pair_btn_frame = tk.Frame(
-            window,
-            relief=tk.RAISED,
-            borderwidth=2,
-            bg=COLORS['bg_raised']
-        )
-        pair_btn_frame.pack(padx=10, pady=10)
-
-        # Pair Sensors Button
-        tk.Button(
-            pair_btn_frame,
-            text="Pair Sensors",
-            font=FONTS['button'],
-            bg=COLORS['purple_btn'],
-            fg=COLORS['text_primary'],
-            activebackground=COLORS['purple_active'],
-            activeforeground=COLORS['text_secondary'],
-            command=api.pair_sensors
-        ).grid(row=0, column=0, padx=10, pady=5)
-
-        # Scan Sensors Button
-        tk.Button(
-            pair_btn_frame,
-            text="Scan for Sensors",
-            font=FONTS['button'],
-            bg=COLORS['blue_btn'],
-            fg=COLORS['text_primary'],
-            activebackground=COLORS['blue_active'],
-            activeforeground=COLORS['text_secondary'],
-            command=api.scan_sensors
-        ).grid(row=0, column=1, padx=10, pady=5)
-
-        # Exit API Button (no EMG Pairing)
-        tk.Button(
-            pair_btn_frame,
-            text="Exit Pairing Window",
-            font=FONTS['button'],
-            bg=COLORS['danger'],
-            fg=COLORS['text_primary'],
-            activebackground=COLORS['danger_active'],
-            activeforeground=COLORS['text_secondary'],
-            command=window.destroy
-        ).grid(row=0, column=2, padx=10, pady=5)
+#    def Load_API(self):  # Loads EMG API (change name of API file)
+#        # Now we're going to build a GUI
+#        window = tk.Tk()
+#        window.title("LETREP26 Pair EMGs...")
+#        window.geometry("960x540")
+#        window.resizable(False, False)
+#        window.configure(bg=COLORS['bg_main'])
+#
+#        # Asthetics
+#        (tk.Label(
+#            window,
+ #           text='EMG Sensor Pairing',
+ #           relief=tk.SUNKEN,
+#            borderwidth=2,
+#            font=FONTS['title'],
+#            bg=COLORS['bg_frame'],
+#            fg=COLORS['text_primary']
+#        )
+#         .pack(padx=10, pady=30, ipadx=5, ipady=5))
+#
+#        pair_btn_frame = tk.Frame(
+#            window,
+#            relief=tk.RAISED,
+#            borderwidth=2,
+#            bg=COLORS['bg_raised']
+#        )
+#        pair_btn_frame.pack(padx=10, pady=10)
+#
+#        # Pair Sensors Button
+#        tk.Button(
+#            pair_btn_frame,
+#            text="Pair Sensors",
+#            font=FONTS['button'],
+#            bg=COLORS['purple_btn'],
+#            fg=COLORS['text_primary'],
+#            activebackground=COLORS['purple_active'],
+#            activeforeground=COLORS['text_secondary'],
+#            command=api.pair_sensors
+#        ).grid(row=0, column=0, padx=10, pady=5)
+#
+#        # Scan Sensors Button
+#        tk.Button(
+#            pair_btn_frame,
+#            text="Scan for Sensors",
+#            font=FONTS['button'],
+#            bg=COLORS['blue_btn'],
+#            fg=COLORS['text_primary'],
+#            activebackground=COLORS['blue_active'],
+#            activeforeground=COLORS['text_secondary'],
+#            command=api.scan_sensors
+#        ).grid(row=0, column=1, padx=10, pady=5)
+#
+#        # Exit API Button (no EMG Pairing)
+#        tk.Button(
+#            pair_btn_frame,
+#            text="Exit Pairing Window",
+#            font=FONTS['button'],
+#            bg=COLORS['danger'],
+#            fg=COLORS['text_primary'],
+#            activebackground=COLORS['danger_active'],
+#            activeforeground=COLORS['text_secondary'],
+#            command=window.destroy
+#        ).grid(row=0, column=2, padx=10, pady=5)
 
     def Start_session(self):
         #session determined by current_session variable
