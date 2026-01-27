@@ -400,14 +400,21 @@ class ParticipantApp:
             messagebox.showwarning("No Session Type Selected","Please Select A Session Type")
             return
         
-        if self.current_session =="Baseline": #Uses current_session variable string to determine which session to activate
-            sm.baseline_motors
-            sm.baseline_collection
-        elif self.current_session =="Normal":
-            sm.normal_motors
-            sm.normal_collection
+        #list valid sessions
+        valid_sessions = ["session1", "session2", "session3"]
+        
+        if self.current_session =="baseline": #Uses current_session variable string to determine which session to activate
+            count = sm.baseline_motors(self.current_entry_index)
+           # sm.baseline_collection()
+            messagebox.showinfo("Session Complete", f"Baseline loop ran {count} times")
+        elif self.current_session in valid_sessions:
+            count = sm.normal_motors(self.current_entry_index)
+           # sm.normal_collection()
+            messagebox.showinfo("Session Complete", f"Normal loop ran {count} times")
         else:
             messagebox.showerror("Error", f"Unknown session type: {self.current_session}")
+        
+
         
 
 #==========================================
