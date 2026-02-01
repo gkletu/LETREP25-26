@@ -9,8 +9,9 @@ import ctypes
 import time
 
 from datetime import datetime
+from serial_comm_Win import SerialComm
 
-# Import your API and ctype libraries
+# Import API and ctype libraries
 #from Python import letrepEMGAPI as api
 ## motorlibrary = ctypes.CDLL(path)    # change "path" to file path of the ctypes
 
