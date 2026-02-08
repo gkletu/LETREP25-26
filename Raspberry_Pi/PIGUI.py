@@ -1,5 +1,6 @@
 #======================
-# Main GUI - Raspberry Pi Version
+# Main GUI - Raspberry Pi Version (no API)
+# needs serial com for force, and network com for EMG
 #======================
 import tkinter as tk
 from tkinter import messagebox, filedialog
@@ -13,11 +14,11 @@ import os
 #===========================
 # Import function libraries
 #===========================
-from EMG_SpecAnn import select_and_load_csv
+from analysis_tests.EMG_SpecAnn import select_and_load_csv
 from participant_manager import ParticipantDataManager
 from login_popup import ParticipantLoginPopup
 #from Python import letrepEMGAPI as api
-import session_manager as sm
+import analysis_tests.session_manager as sm
 
 #======================
 # Import Theme
