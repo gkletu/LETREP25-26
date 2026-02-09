@@ -324,7 +324,38 @@ class ParticipantDataManager:
             return False, f"Failed to copy file: {e}"
         except Exception as e:
             return False, f"Unexpected error: {e}"
+        
+# ============================================================
+# THRESHOLD STUFF
+# ============================================================       
+    def get_threshold(self, participant_id):
+        """
+        Retrieves curent active threshold for a given participant.
+        Defaults to 0.0 if not set yet.
+        """
+        data = self.participants_data.get(participant_id,{})
+        if isinstance(data,dict):
+            return data.get("active_threshold", 0.0)
+        return 0.0
+    
+    def update_threshold(self, participant_id, new_threshold):
+        """
+        Updates the participant's threshold in JSON log.
+        """
+        if participant_id not in self.participants_data:
+            self.participants_data[participant_id] = []
 
+        if isinstance(self.participants_data[participant_id], list):
+            entries = self.participants_data[participant_id]
+            self.participants_data[participant_id] = {
+                "entries": entries,
+                "active_threshold": round(new_threshold, 4)
+            }
+        else:
+            self.participants_data[participant_id]["active_threshold"] = round(new_threshold, 4)
+
+        self.save_data()
+        print(f"✓ Threshold for {participant_id} updated to: {new_threshold}")
 
 # ============================================================
 # MODULE TEST (Optional)

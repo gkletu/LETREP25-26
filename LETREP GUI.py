@@ -14,15 +14,15 @@ from win32inetcon import API_WRITE_DATA
 # Import function libraries
 #===========================
 from analysis_tests.EMG_SpecAnn import select_and_load_csv
-from participant_manager import ParticipantDataManager
-from login_popup import ParticipantLoginPopup
+from toolbox.participant_manager import ParticipantDataManager
+from toolbox.login_popup import ParticipantLoginPopup
 #from Python import letrepEMGAPI as api
 import analysis_tests.session_manager as sm
 
 #======================
 # Import Theme
 #======================
-from theme import COLORS, FONTS
+from toolbox.theme import COLORS, FONTS
 
 #======================
 # Main app class

@@ -1,3 +1,4 @@
+# theme.py (Theme colors and fonts for all GUI aspects)
 COLORS = {
     'bg_main': '#6b6254',
     'bg_frame': '#5F574B',

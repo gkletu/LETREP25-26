@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from theme import COLORS, FONTS
+from toolbox.theme import COLORS, FONTS
 
 
 class ParticipantLoginPopup:
@@ -375,7 +375,7 @@ class ParticipantLoginPopup:
 # ============================================================
 
 if __name__ == "__main__":
-    from participant_manager import ParticipantDataManager
+    from toolbox.participant_manager import ParticipantDataManager
 
     def callback(pid, entry_i, session):
         print("SUCCESS:", pid, entry_i, session)
