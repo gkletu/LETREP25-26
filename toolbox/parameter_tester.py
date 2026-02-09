@@ -17,7 +17,9 @@ def set_angle(angle):
     print(f"Angular Displacement Set to ", {angle})
     
 def run_motor():
-    print("Motor Running")
+    # ctypes.acceleration_velocity_set(int(accel.get()), int(vel.get()))
+    # ctypes.moveDistance( parameters, int(angle.get()), targetIsAbsolute = False)
+
 
 class Window:
     def __init__(self, master):
@@ -82,7 +84,10 @@ class Window:
             command = lambda: run_motor()
         )
         self.run_button.pack()
-        
+
+# Motor Initialization Function        
+## ctypes.setup()
+
 root = tk.Tk()
 root.title("Motor Parameter Tetster")
 
