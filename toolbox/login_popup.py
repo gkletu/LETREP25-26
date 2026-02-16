@@ -19,15 +19,21 @@ class ParticipantLoginPopup:
       5. Callback on success
     """
 
-    def __init__(self, parent, data_manager, on_success):
+    def __init__(self, parent, data_manager, on_success, participant_id=None):
         self.parent = parent
         self.data_manager = data_manager
         self.on_success = on_success
 
-        self.selected_participant = None
+        self.selected_participant = participant_id
         self.selected_entry_index = None
 
-        self._show_number_pad_popup()
+        if participant_id:
+            # We need to get the entries list first so we can pass it to the function
+            entries = self.data_manager.get_participant_entries(participant_id)
+            self._show_entry_selection_popup(entries)
+        else:
+            # Normal login path
+            self._show_number_pad_popup()
 
     # ============================================================
     # NUMBER PAD POPUP

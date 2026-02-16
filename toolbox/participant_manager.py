@@ -164,23 +164,13 @@ class ParticipantDataManager:
     # ============================================================
 
     def get_participant_entries(self, participant_id):
-        """
-        Get all entries for a specific participant.
+        """Get all entries for a specific participant"""
+        data = self.participants_data.get(participant_id, [])
 
-        Parameters:
-            participant_id (str): Participant ID to look up
-
-        Returns:
-            list: List of entry dictionaries, each containing:
-                  {
-                      "entry_number": int,
-                      "sessions": [list of session names],
-                      "created": str (ISO format datetime),
-                      "entry_folder": str (path to entry folder)
-                  }
-                  Returns empty list if participant not found.
-        """
-        return self.participants_data.get(participant_id, [])
+        if isinstance(data, dict):
+            return data.get("entries",[])
+        
+        return data
 
     # ============================================================
     # ENTRY CREATION METHODS
@@ -333,8 +323,8 @@ class ParticipantDataManager:
         Retrieves curent active threshold for a given participant.
         Defaults to 0.0 if not set yet.
         """
-        data = self.participants_data.get(participant_id,{})
-        if isinstance(data,dict):
+        data = self.participants_data.get(participant_id, [])
+        if isinstance(data, dict):
             return data.get("active_threshold", 0.0)
         return 0.0
     
@@ -343,12 +333,13 @@ class ParticipantDataManager:
         Updates the participant's threshold in JSON log.
         """
         if participant_id not in self.participants_data:
-            self.participants_data[participant_id] = []
+            self.participants_data[participant_id] = {"entries": [], "active_threshold": 0.0}
 
-        if isinstance(self.participants_data[participant_id], list):
-            entries = self.participants_data[participant_id]
+        current_data = self.participants_data[participant_id]
+        
+        if isinstance(current_data, list):
             self.participants_data[participant_id] = {
-                "entries": entries,
+                "entries": current_data,
                 "active_threshold": round(new_threshold, 4)
             }
         else:

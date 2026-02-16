@@ -1,90 +1,120 @@
-# runs the loops and runs the motors for the ctypes
+ # runs the loops and runs the motors for the ctypes
 
 import time
 import csv
 import sys
 import os
 import threading
-from analysis.processors import analyze_trial, calculate_start_threshold, threshold_adjust
+from processors import analize_trial, calculate_start_threshold, threshold_adjust  #IDK what this is for, theyre in the same folder, I shouldnt need this...
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from toolbox.participant_manager import ParticipantDataManager
 
 class SessionManager:
-    def __init__(self, data_manager, gui_callback):
+    def __init__(self, data_manager: ParticipantDataManager, gui_callback):
         """
         data_manager: ParticipantDataManager instance
         gui_callback: A function in the main GUI to update the plot/stats
         """
-        self.dm = ParticipantDataManager
+        self.dm = data_manager   #use instance passed from the GUI
         self.gui_update = gui_callback
 
         # state variables for current active entry
         self.active_threshold = 0.0
         self.session_maxes = []
         self.success_history = []
+        self.current_trial_num = 0
+        self.total_trials_needed = 0
+        self.p_id = None
+        self.entry_idx = None
+        self.sess_type = None
 
-    def run_entry(self, p_id, entry_idx, session_type):
-        """
-        Main execution loop for an entry.
-        Determines trial count and handles the threshold management.
-        """
-        # Load existing threshold from JSON log
-        self.active_threshold = self.dm.get_threshold(p_id)
+    def prepare_session(self, p_id, entry_idx, session_type):
+        """Sets up the session variables but doesn't run the loop"""
+        self.p_id = p_id
+        self.entry_idx = entry_idx
+        self.sess_type = session_type
 
-        # reset entry states
+        # Load threshold (if there is one saved)
+        try:
+            self.active_threshold = self.dm.get_threshold(p_id)
+        except AttributeError:
+            self.active_threshold = 0.0 # fallback if no threshold
+
         self.session_maxes = []
         self.success_history = []
-        num_trials = 50 if session_type == "baseline" else 75
+        self.current_trial_num = 0
+        self.total_trials_needed = 50 if session_type == "baseline" else 75
+        return self.total_trials_needed
 
-        for i in range(num_trials):
-            trial_num = i + 1
+    def run_single_trial(self):
+        """Runs one trial, updates GUI and returns True if more trials remain"""
+        if self.current_trial_num >= self.total_trials_needed:
+            return False
+        
+        self.current_trial_num += 1
 
-            # Hardware Interaction
-              #this is where ctypes are called
-            raw_emg, raw_force = self._collect_data_samples()
-
-            # Analysis 
-            results = analyze_trial(raw_emg, raw_force, self.active_threshold)
-            
-            # Update local history
-            self.session_maxes.append(results['max_emg'])
-            self.success_history.append(results['is_success'])
-
-            # save raw csv via data manager
-            self._temp_save_and_move(p_id, entry_idx, session_type, trial_num, raw_emg, raw_force)
-
-            # Update the GUI plot and counters (not sure if the false works yet...)
-            self.gui_update(self.session_maxes, self.success_history.count(True), self.success_history.count(False))
-
-        # Post-session threshold logic
-        self._handle_end_of_session_math(p_id, session_type)
-
-        return self.session_maxes
+        threading.Thread(target=self._trial_worker, daemon=True).start()
+        
+        return True
     
-    def _handle_end_of_session_math(self, p_id, session_type):
+    def _trial_worker(self):
+        """this works in parallel to the GUI via threading"""
+        # collect data (where motor code and sensor code will live
+        # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
+        # self.motor_library.move_to_start() 
+
+        # DATA COLLECTION 
+        # This calls the bridge function below
+        raw_emg, raw_force = self._collect_data_samples()
+
+        # ANALYSIS & SAVING
+        results = analize_trial(raw_emg, raw_force, self.active_threshold)
+        self.session_maxes.append(results['max_emg'])
+        self.success_history.append(results['is_success'])
+        
+        self._temp_save_and_move(
+            self.p_id, self.entry_idx, self.sess_type, 
+            self.current_trial_num, raw_emg, raw_force
+        )
+        
+        # UI UPDATE
+        successes = self.success_history.count(True)
+        fails = self.success_history.count(False)
+        self.gui_update(self.session_maxes, self.active_threshold, successes, fails)
+
+        if self.current_trial_num >= self.total_trials_needed:
+            self._handle_end_of_session_math()
+    
+    def _handle_end_of_session_math(self):
         """
         Calculates and saves new thresholds based on performance.
         """
-        if session_type == "baseline":
-            # initial setup: 65% of average of 50 trials
+        if self.sess_type == "baseline":
             new_t = calculate_start_threshold(self.session_maxes)
-            self.dm.update_threshold(p_id, new_t) #Issues with update_threshold
-            self.active_threshold = new_t
-            print(f"Baseline Complete. threshold set to: {new_t}")
 
-        elif session_type in ["entry1", "entry2", "entry3"]:
+        else:
             # mastery check: if 75% success, reduce threshold by 35%
             new_t = threshold_adjust(self.success_history, self.active_threshold)
 
-            if new_t != self.active_threshold:
-                self.dm.updata_threshold(p_id, new_t)
-                self.active_threshold = new_t
-                print(f"Mastery Achieved! New Threshold: {new_t}")
+        if new_t != self.active_threshold:
+            self.dm.update_threshold(self.p_id, new_t)
+
 
     def _collect_data_samples(self):
         # Placeholder for real sensor polling
-        time.sleep(0.1) # simulate hardware delay
-        return [0.5, 0.6, 0.4], [10, 12, 11] # EMG, Force
+        emg_data = []
+        force_data = []
+        
+        # Example Logic
+        # duration = 2.0 # in seconds I think
+        # start = time.time()
+        # while (time.time() - start) < duration:
+        #    force_data.append(self.serial_port.read())
+        #    emg_data.append(self.socket.recv())
+        
+        # Placeholder
+        time.sleep(0.5) 
+        return [0.1, 0.5, 0.2], [5.0, 5.5, 5.1] # (emg, force)
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """

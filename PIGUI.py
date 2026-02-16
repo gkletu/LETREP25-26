@@ -18,7 +18,9 @@ from analysis_tests.EMG_SpecAnn import select_and_load_csv
 from toolbox.participant_manager import ParticipantDataManager
 from toolbox.login_popup import ParticipantLoginPopup
 #from Python import letrepEMGAPI as api
-import analysis_tests.session_manager as sm
+from analysis.session_logic import SessionManager
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from analysis.plotter import LivePlotter # the live plotter class from the plotter.py
 
 #======================
 # Import Theme
@@ -56,9 +58,11 @@ class ParticipantApp:
         self.current_entry_index = 0
         self.current_session = None
         self.current_csv_path = None
+        self.trial_in_progress = False
 
         #-------Initialize data manager-------
         self.data_manager = ParticipantDataManager()
+        self.sm = SessionManager(self.data_manager, self.update_ui_callback)
 
         #--------Build UI components--------
         self._create_status_bar()
@@ -119,25 +123,23 @@ class ParticipantApp:
             activeforeground=COLORS['text_primary'],
             command=self.Start_session,
             state=tk.DISABLED,
-            width=15,
-            height=2,
+            width=15, height=2,
             relief=tk.SUNKEN
         )
         self.load_btn.grid(row=0, column=0, padx=10, pady=10)
 
-        # Save Session button (blue, depressed initially)
+        # Select entry button (blue, depressed initially) (was save_btn)
         self.save_btn = tk.Button(
             button_frame,
-            text="Save Session",
+            text="Change Entry",
             font=FONTS['button'],
             bg=COLORS['blue_active'],
             fg=COLORS['text_primary'],
             activebackground=COLORS['blue_active'],
             activeforeground=COLORS['text_primary'],
-            command=self.save_to_session,
+            command=self.Open_entry_only,
             state=tk.DISABLED,
-            width=15,
-            height=2,
+            width=15, height=2,
             relief=tk.SUNKEN
         )
         self.save_btn.grid(row=0, column=1, padx=10, pady=10)
@@ -152,8 +154,7 @@ class ParticipantApp:
             activebackground=COLORS['purple_active'],
             activeforeground=COLORS['text_primary'],
             command=self.show_login_popup,
-            width=18,
-            height=2
+            width=18, height=2
         )
         self.change_participant_btn.grid(row=0, column=2, padx=10, pady=10)
 
@@ -167,20 +168,62 @@ class ParticipantApp:
             activebackground=COLORS['danger_active'],
             activeforeground=COLORS['text_primary'],
             command=self.close_window,
-            width=15,
-            height=2
+            width=15, height=2
         )
         self.exit_btn.grid(row=0, column=3, padx=10, pady=10)
 
     def _create_plot_frame(self):
-        """Create frame for displaying matplotlib plots."""
+        """Create frame for plot and a side-panel for live trial stats."""
+        # Main container for both plot and stats
+        self.main_content_frame = tk.Frame(self.root, bg=COLORS['bg_main'])
+        self.main_content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        # 1. Plot Frame (Left Side)
         self.plot_frame = tk.Frame(
-            self.root,
+            self.main_content_frame,
             bg=COLORS['bg_frame'],
             relief=tk.SUNKEN,
             bd=2
         )
-        self.plot_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.plot_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # 2. Stats Panel (Right Side - Matching the button frame look)
+        self.stats_panel = tk.Frame(
+            self.main_content_frame,
+            bg=COLORS['bg_raised'], # Same as button frame
+            relief=tk.RAISED,
+            bd=2,
+            width=200
+        )
+        self.stats_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
+        self.stats_panel.pack_propagate(False) # Keeps the width consistent
+
+        # Add Labels to Stats Panel
+        tk.Label(self.stats_panel, text="SESSION STATS", font=FONTS['label_1'], 
+                 bg=COLORS['bg_raised'], fg=COLORS['text_primary']).pack(pady=10)
+
+        # Success Label
+        self.success_count_label = tk.Label(
+            self.stats_panel, text="Success: 0", font=FONTS['title'],
+            bg=COLORS['bg_frame'], fg=COLORS['success'], # Green text
+            relief=tk.SUNKEN, bd=2, width=12
+        )
+        self.success_count_label.pack(pady=10, padx=10)
+
+        # Fail Label
+        self.fail_count_label = tk.Label(
+            self.stats_panel, text="Failed: 0", font=FONTS['title'],
+            bg=COLORS['bg_frame'], fg=COLORS['danger'], # Red text
+            relief=tk.SUNKEN, bd=2, width=12
+        )
+        self.fail_count_label.pack(pady=10, padx=10)
+
+        # Initialize Plotter in the left frame
+        self.plot_manager = LivePlotter(self.plot_frame)
+        self.canvas = FigureCanvasTkAgg(self.plot_manager.fig, master=self.plot_frame)
+        self.canvas_widget = self.canvas.get_tk_widget()
+        self.canvas_widget.pack(fill=tk.BOTH, expand=True)
+        self.canvas.draw()
 
     #===============================
     # Event Handlers
@@ -192,6 +235,17 @@ class ParticipantApp:
             on_success=self.on_login_success
         )
 
+    def Open_entry_only(self):
+        """skips the number pad and goes straigh to entry selection for current participant"""
+        if self.current_participant:
+            # we pass the ID to the popup
+            ParticipantLoginPopup(
+                self.root,
+                self.data_manager,
+                on_success=self.on_login_success,
+                participant_id=self.current_participant
+            )
+
     def on_login_success(self, participant_id, entry_index, session):
         """Called when user successfully logs in and selects a session."""
         self.current_participant = participant_id
@@ -201,13 +255,13 @@ class ParticipantApp:
         self.update_status()
 
         # Enable buttons and switch to normal colors/RAISED relief
-        self.load_btn.config(
+        self.load_btn.config(   # start session button
             state=tk.NORMAL,
             bg=COLORS['success'],
             activebackground=COLORS['success_active'],
             relief=tk.RAISED
         )
-        self.save_btn.config(
+        self.save_btn.config(  # change entry button
             state=tk.NORMAL,
             bg=COLORS['blue_btn'],
             activebackground=COLORS['blue_active'],
@@ -216,11 +270,11 @@ class ParticipantApp:
 
         messagebox.showinfo(
             "Ready",
-            f"Ready to work with Participant {participant_id}\n"
-            f"Entry {entry_index + 1}, {session}"
+            f"Participant: {participant_id}\n"
+            f"Entry: {entry_index + 1}\nMode: {session}"
         )
 
-    def load_csv_file(self):
+    def load_csv_file(self):  # not used
         """Open file dialog, load CSV, and display plot."""
         file_path = filedialog.askopenfilename(
             title="Select CSV file",
@@ -351,18 +405,70 @@ class ParticipantApp:
             messagebox.showwarning("No Session Type Selected","Please Select A Session Type")
             return
         
-        #list valid sessions
-        valid_sessions = ["session1", "session2", "session3"]
-        
-        if self.current_session == "baseline":
-            count = sm.baseline_motors(self.current_entry_index)
-            messagebox.showinfo("Session Complete", f"Baseline loop ran {count} times")
-        elif self.current_session in valid_sessions:
-            count = sm.normal_motors(self.current_entry_index)
-            messagebox.showinfo("Session Complete", f"Normal loop ran {count} times")
-        else:
-            messagebox.showerror("Error", f"Unknown session type: {self.current_session}")
+        self.sm.prepare_session(
+            self.current_participant,
+            self.current_entry_index,
+            self.current_session
+            )
 
+        self.current_trial_count = 0
+        self.session_success_count = 0 # keep for now
+        self.session_fail_count = 0    # keep for now
+
+        # Lock UI so buttons cant be pressed while motors and sesnors are running
+        self.load_btn.config(state=tk.DISABLED, text="Running...")
+        self.save_btn.config(state=tk.DISABLED)
+        self.change_participant_btn.config(state=tk.DISABLED)
+        self.exit_btn.config(state=tk.DISABLED) #prevents exit while entry is running
+
+        # start the loop
+        self.run_trial_cycle()
+
+    def run_trial_cycle(self): #look back at session_logic.py
+        """runs one trial, updates the plot, then shedules the next trial to keep GUI alive"""
+        # If a trial is still running in the background, just wait
+        if getattr(self, 'trial_in_progress', False):
+            self.root.after(100, self.run_trial_cycle)
+            return
+
+        if self.current_trial_count < self.total_trials_needed:
+            self.trial_in_progress = True # Set the lock
+            self.current_trial_count += 1
+            
+            # Start the threaded trial
+            self.sm.run_single_trial()
+            
+            # Re-check in a bit
+            self.root.after(100, self.run_trial_cycle)
+        else:
+            self._finalize_entry()
+
+    def _finalize_entry(self):
+        """runs once all trials are done"""
+        #calculate all thresholds
+
+        # Unlock UI
+        self.load_btn.config(state=tk.NORMAL, text="Start Session")
+        self.save_btn.config(state=tk.NORMAL)
+        self.change_participant_btn.config(state=tk.NORMAL)
+        self.exit_btn.config(state=tk.NORMAL)
+
+        messagebox.showinfo("Complete", f"Entry complete! {self.total_trials_needed} trials saved.")
+
+    def update_ui_callback(self, current_maxes, threshold, successes, failures):
+        """
+        This is called by session_logic after every trial to update the screen.
+        """
+        # Update the Plotter with the list of max values
+        self.plot_manager.update(current_maxes, threshold)
+        self.canvas.draw()
+
+        # update specific labels on the right
+        self.success_count_label.config(text=f"Successes: {successes}")
+        self.fail_count_label.config(text=f"Fails: {failures}")
+
+        # signal that hardware thread is finished
+        self.trial_in_progress = False
 
 #==========================================
 # Main entry point
