@@ -405,7 +405,7 @@ class ParticipantApp:
             messagebox.showwarning("No Session Type Selected","Please Select A Session Type")
             return
         
-        self.sm.prepare_session(
+        self.total_trials_needed = self.sm.prepare_session(
             self.current_participant,
             self.current_entry_index,
             self.current_session

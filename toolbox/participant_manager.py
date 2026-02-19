@@ -75,7 +75,7 @@ class ParticipantDataManager:
         if not os.path.exists(self.base_dir):
             try:
                 os.makedirs(self.base_dir)
-                print(f"✓ Created base directory: {self.base_dir}")
+                print(f"Created base directory: {self.base_dir}")
             except OSError as e:
                 messagebox.showerror("Error", f"Failed to create base directory: {e}")
 
@@ -88,10 +88,10 @@ class ParticipantDataManager:
             if os.path.exists(self.log_file):
                 with open(self.log_file, 'r') as f:
                     self.participants_data = json.load(f)
-                print(f"✓ Loaded data for {len(self.participants_data)} participants")
+                print(f"Loaded data for {len(self.participants_data)} participants")
             else:
                 self.participants_data = {}
-                print("ℹ No existing data file found. Starting fresh.")
+                print("No existing data file found. Starting fresh.")
         except json.JSONDecodeError as e:
             messagebox.showerror("Error", f"Data file is corrupted: {e}\nStarting with empty data.")
             self.participants_data = {}
@@ -114,7 +114,7 @@ class ParticipantDataManager:
             with open(self.log_file, 'w') as f:
                 json.dump(self.participants_data, f, indent=4)
 
-            print(f"✓ Data saved to {self.log_file}")
+            print(f"Data saved to {self.log_file}")
             return True
 
         except IOError as e:
@@ -246,7 +246,7 @@ class ParticipantDataManager:
         self.save_data()
 
         # Log creation
-        print(f"✓ Created entry {entry_count} for participant {participant_id}")
+        print(f"  Created entry {entry_count} for participant {participant_id}")
         print(f"  Folder: {entry_folder}")
         print(f"  Sessions: {', '.join(sessions)}")
 
@@ -305,7 +305,7 @@ class ParticipantDataManager:
             # shutil.copy2 preserves file metadata (creation date, etc.)
             shutil.copy2(source_csv_path, dest_path)
 
-            print(f"✓ Saved CSV to: {dest_path}")
+            print(f"Saved CSV to: {dest_path}")
             return True, dest_path
 
         except FileNotFoundError as e:
@@ -346,7 +346,7 @@ class ParticipantDataManager:
             self.participants_data[participant_id]["active_threshold"] = round(new_threshold, 4)
 
         self.save_data()
-        print(f"✓ Threshold for {participant_id} updated to: {new_threshold}")
+        print(f"Threshold for {participant_id} updated to: {new_threshold}")
 
 # ============================================================
 # MODULE TEST (Optional)
@@ -364,14 +364,14 @@ if __name__ == "__main__":
     test_ids = ["01", "99", "00", "1", "100", "abc", ""]
     for test_id in test_ids:
         valid, msg = manager.validate_participant_id(test_id)
-        status = "✓" if valid else "✗"
+        status = "v" if valid else "x"
         print(f"{status} ID '{test_id}': {msg if msg else 'Valid'}")
 
     # Test entry creation
     print("\nCreating test entry...")
     folder, sessions = manager.create_new_entry("01")
     if folder:
-        print(f"✓ Created: {folder}")
+        print(f"Created: {folder}")
         print(f"  Sessions: {sessions}")
 
     print("\nTest complete!")

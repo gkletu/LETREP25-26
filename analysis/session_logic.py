@@ -5,7 +5,9 @@ import csv
 import sys
 import os
 import threading
-from processors import analize_trial, calculate_start_threshold, threshold_adjust  #IDK what this is for, theyre in the same folder, I shouldnt need this...
+
+from analysis import processors
+# from processors import analize_trial, calculate_start_threshold, threshold_adjust  #IDK what this is for, theyre in the same folder, I shouldnt need this...
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from toolbox.participant_manager import ParticipantDataManager
 
