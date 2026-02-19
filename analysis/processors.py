@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def analyze_trial(emg_data, force_data, active_threshold=0):
+def analize_trial(emg_data, force_data, active_threshold=0):
     # Processes a single trial
     # emg_data: raw EMG data
     # force_data: raw force data
