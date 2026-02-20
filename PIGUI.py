@@ -17,7 +17,7 @@ import os
 from analysis_tests.EMG_SpecAnn import select_and_load_csv
 from toolbox.participant_manager import ParticipantDataManager
 from toolbox.login_popup import ParticipantLoginPopup
-#from Python import letrepEMGAPI as api
+#from Python import letrepEMGAPI as api # not neccesary without the working API
 from analysis.session_logic import SessionManager
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from analysis.plotter import LivePlotter # the live plotter class from the plotter.py
@@ -41,14 +41,25 @@ class ParticipantApp:
         self.root = root
         self.root.title('LETREP26 GUI')
         
-        # Modified fullscreen for Raspberry Pi
-        try:
-            self.root.attributes('-fullscreen', True)
-        except tk.TclError:
-            # Fallback if fullscreen not supported
-            self.root.attributes('-zoomed', True)
-        
+        # Modified fullscreen for Raspberry Pi 5 / wayland  # different window commands than normal linux or pi 3 for some reason
+        # 1. Basic configuration
         self.root.configure(bg=COLORS['bg_main'])
+
+        # 2. Force the window to initialize so Linux/Wayland recognizes it
+        self.root.update_idletasks()
+
+        # 3. Apply Fullscreen Logic for Pi 5 / Wayland
+        try:
+            # This is the standard request
+            self.root.attributes('-fullscreen', True)
+            
+            # If standard fullscreen is ignored by Wayland,this forces the window to at least fill the usable space
+            self.root.state('zoomed') 
+            
+            # OPTIONAL: Uncomment the line below for "Kiosk" mode (hides top bar)
+            self.root.overrideredirect(True) 
+        except tk.TclError as e:
+            print(f"Window scaling error: {e}")
 
         # Bind Escape key to exit fullscreen
         self.root.bind("<Escape>", lambda e: self._exit_fullscreen())
@@ -243,7 +254,8 @@ class ParticipantApp:
                 self.root,
                 self.data_manager,
                 on_success=self.on_login_success,
-                participant_id=self.current_participant
+                participant_id=self.current_participant,
+                force_new_entry=True
             )
 
     def on_login_success(self, participant_id, entry_index, session):

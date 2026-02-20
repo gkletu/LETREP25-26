@@ -19,7 +19,7 @@ class ParticipantLoginPopup:
       5. Callback on success
     """
 
-    def __init__(self, parent, data_manager, on_success, participant_id=None):
+    def __init__(self, parent, data_manager, on_success, participant_id=None, force_new_entry=False):
         self.parent = parent
         self.data_manager = data_manager
         self.on_success = on_success
@@ -27,13 +27,26 @@ class ParticipantLoginPopup:
         self.selected_participant = participant_id
         self.selected_entry_index = None
 
-        if participant_id:
-            # We need to get the entries list first so we can pass it to the function
+        if participant_id and force_new_entry:
+            # SHORTCUT: We already have a participant and want a new entry
+            self._force_new_entry_flow(participant_id)
+        elif participant_id:
+            # Show entry selection for a known participant (Existing Entry flow)
             entries = self.data_manager.get_participant_entries(participant_id)
             self._show_entry_selection_popup(entries)
         else:
-            # Normal login path
+            # Standard flow: Start with the number pad
             self._show_number_pad_popup()
+
+    def _force_new_entry_flow(self, pid):
+        """Creates a new entry immediately and jumps to session selection."""
+        entry_folder, sessions = self.data_manager.create_new_entry(pid)
+        if entry_folder:
+            entries = self.data_manager.get_participant_entries(pid)
+            self.selected_entry_index = len(entries) - 1
+            # Note: We don't need self.popup.destroy() here because 
+            # the popup hasn't been built yet in this flow.
+            self._show_session_selection_popup(sessions)
 
     # ============================================================
     # NUMBER PAD POPUP
