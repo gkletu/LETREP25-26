@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+from scipy import signal
 
 def analize_trial(emg_df, force_data, active_threshold=0):
     # Processes a single trial
@@ -12,12 +13,47 @@ def analize_trial(emg_df, force_data, active_threshold=0):
     # Extract list of EMG magnitude from EMG dataframe
     emg_values = emg_df['value'].tolist()
 
-    # Rectify and find EMG max
-    rectified_emg = [abs(x) for x in emg_values]
-    max_emg = max(rectified_emg) if rectified_emg else 0
+    # Preprocessing EMG Data  
+    emg_fs = 2148.148 # Sampling frequency of EMG sensor
+    rectified_emg = np.abs(emg_values)
+    emg_envelope = scipy.signal.savgol_filter(rectified, window_length=int(0.2*emg_fs)|1, polyorder=3)
 
-    # Find max force
-    max_force = max(force_data) if force_data else 0
+    # Restrict to Reflex Window (t0 is the time at which the stretch reflex is induced)
+    # Adjust t0 as needed to account for motor delay. Reflex is typically 15-50 ms after stretch
+    emg_start = int(t0 + 0.015 * emg_fs) 
+    emg_end = int(t0 + 0.050 * emg_fs)
+    emg_segment = envelope[start:end] # isolate the time window with only the reflex
+
+    # EMG Peak Detection
+    emg_peaks = find_peaks(
+        emg_segment, # time window with only the reflex
+        prominence = 0.1*np.max(emg_envelope), # peak must stand out by at least 10%
+        distance = int(0.2 * emg_fs), # Ensures that peaks are at least 20 ms apart
+        width = int(0.005 * emg_fs), # Requires peaks to be at  least 5 ms wide
+    )
+    
+    # EMG Max
+    max_emg = np.max(emg_peaks)
+
+    # Preprocessing Force Data
+    force_fs = 115200
+    force_envelope = savgol_filter(force_signal, window_length=int(0.2*force_fs)|1, polyorder=3)
+
+    # Restrict to Reflex Window
+    force_start = int(t0 + 0.015*fs)  # 15 ms after stimulus
+    force_end   = int(t0 + 0.050*fs)  # 50 ms after stimulus
+    force_segment = force_envelope[start:end]
+
+    # Force Peak Detection
+    force_peaks = find_peaks(
+    segment,
+    prominence=0.05 * np.max(force_envelope),  # 5–10% of max force
+    distance=int(0.02 * fs),                   # 20 ms minimal spacing
+    width=int(0.005 * fs),                     # minimum 5 ms width
+)
+
+    # Force Max
+    max_force = np.max(force_peaks)
 
     # Threshold logic
     # is_success = True if max_emg < threshold
