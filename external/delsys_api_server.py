@@ -18,8 +18,8 @@ from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.client import Binary
 
 # Import the *correct* class names
-from project.AeroPy.DataManager import DataKernel  # <-- FIX 1: The class is DataKernel
-from project.AeroPy.TrignoBase import TrignoBase
+from external.AeroPy.DataManager import DataKernel  # <-- FIX 1: The class is DataKernel
+from external.AeroPy.TrignoBase import TrignoBase
 
 class ThreadedXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     pass
