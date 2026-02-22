@@ -1,15 +1,19 @@
 # handles all the math, rectify, max, and threshold
 
 import numpy as np
+import pandas as pd
 
-def analize_trial(emg_data, force_data, active_threshold=0):
+def analize_trial(emg_df, force_data, active_threshold=0):
     # Processes a single trial
-    # emg_data: raw EMG data
+    # emg_data: raw EMG dataframe
     # force_data: raw force data
     # active_threshold: 65% the baseline average for comparison
 
+    # Extract list of EMG magnitude from EMG dataframe
+    emg_values = emg_df['value'].tolist()
+
     # Rectify and find EMG max
-    rectified_emg = [abs(x) for x in emg_data]
+    rectified_emg = [abs(x) for x in emg_values]
     max_emg = max(rectified_emg) if rectified_emg else 0
 
     # Find max force

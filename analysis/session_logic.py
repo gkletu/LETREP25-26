@@ -5,10 +5,13 @@ import csv
 import sys
 import os
 import threading
+import ctypes
+import pandas as pd
 
 from analysis import processors
 # from processors import analize_trial, calculate_start_threshold, threshold_adjust  #IDK what this is for, theyre in the same folder, I shouldnt need this...
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+from toolbox import delsys_api_client as api
 from toolbox.participant_manager import ParticipantDataManager
 
 class SessionManager:
@@ -62,8 +65,24 @@ class SessionManager:
     def _trial_worker(self):
         """this works in parallel to the GUI via threading"""
         # collect data (where motor code and sensor code will live
+        motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working2.so")
+
+        motor.setup()                                   
+        #motor.acceleration_velocity_set(1000,500)		#slow down velocity
+        #motor.move_counts(0,1)                          #ensure motor is at home
+        #time.sleep(1.5)
+        #motor.move_counts(-8000,1)                      #move to 45 deg
+
         # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
-        # self.motor_library.move_to_start() 
+        #motor.move_speed(200) # move at 200 rpm
+        #time.sleep(1)   # for 1 second
+
+        # self.motor_library.move_to_start()
+        #motor.acceleration_velocity_set(-8000, -500) #set acceleration to 8000 and velocity to 500
+        motor.move_counts(0,1)							#extend to home position
+        time.sleep(3)									#delay for 3/10 of a second
+
+        #motor.shutdown_node()
 
         # DATA COLLECTION 
         # This calls the bridge function below
@@ -104,7 +123,13 @@ class SessionManager:
 
     def _collect_data_samples(self):
         # Placeholder for real sensor polling
-        emg_data = []
+        
+        api.start_collect() # begins data collection for emg sensors
+        duration = 2.0 # duration of emg collection in trial (seconds)
+        time.sleep(duration) # wait for duration 
+
+        emg_data = api.stop_collect() # returns the emg data from the trial as a dataframe
+        
         force_data = []
         
         # Example Logic
@@ -113,10 +138,8 @@ class SessionManager:
         # while (time.time() - start) < duration:
         #    force_data.append(self.serial_port.read())
         #    emg_data.append(self.socket.recv())
-        
-        # Placeholder
-        time.sleep(0.5) 
-        return [0.1, 0.5, 0.2], [5.0, 5.5, 5.1] # (emg, force)
+         
+        return emg_data, [5.0, 5.5, 5.1] # (emg, force)
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """

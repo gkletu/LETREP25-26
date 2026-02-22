@@ -17,6 +17,7 @@ import os
 from analysis_tests.EMG_SpecAnn import select_and_load_csv
 from toolbox.participant_manager import ParticipantDataManager
 from toolbox.login_popup import ParticipantLoginPopup
+from toolbox import delsys_api_client as api
 #from Python import letrepEMGAPI as api # not neccesary without the working API
 from analysis.session_logic import SessionManager
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -80,8 +81,72 @@ class ParticipantApp:
         self._create_button_frame()
         self._create_plot_frame()
 
-        #--------Show login popup--------
-        #self.root.after(100, self.Load_API)  #Launches API on start up
+        #--------Run on Startup--------
+        self.root.after(100, self.Load_API)  #Launches API on start up
+
+    def Load_API(self):  # Loads EMG API (change name of API file)
+        # Now we're going to build a GUI
+        window = tk.Tk()
+        window.title("LETREP26 Pair EMGs...")
+        window.geometry("960x540")
+        window.resizable(False, False)
+        window.configure(bg=COLORS['bg_main'])
+
+        # Asthetics
+        (tk.Label(
+            window,
+            text='EMG Sensor Pairing',
+            relief=tk.SUNKEN,
+            borderwidth=2,
+            font=FONTS['title'],
+            bg=COLORS['bg_frame'],
+            fg=COLORS['text_primary']
+        )
+         .pack(padx=10, pady=30, ipadx=5, ipady=5))
+
+        pair_btn_frame = tk.Frame(
+            window,
+            relief=tk.RAISED,
+            borderwidth=2,
+            bg=COLORS['bg_raised']
+        )
+        pair_btn_frame.pack(padx=10, pady=10)
+
+        # Pair Sensors Button
+        tk.Button(
+            pair_btn_frame,
+            text="Pair Sensors",
+            font=FONTS['button'],
+            bg=COLORS['purple_btn'],
+            fg=COLORS['text_primary'],
+            activebackground=COLORS['purple_active'],
+            activeforeground=COLORS['text_secondary'],
+            command=lambda: api.pair_sensors(window)
+        ).grid(row=0, column=0, padx=10, pady=5)
+
+        # Scan Sensors Button
+        tk.Button(
+            pair_btn_frame,
+            text="Scan for Sensors",
+            font=FONTS['button'],
+            bg=COLORS['blue_btn'],
+            fg=COLORS['text_primary'],
+            activebackground=COLORS['blue_active'],
+            activeforeground=COLORS['text_secondary'],
+            command=api.scan_sensors
+        ).grid(row=0, column=1, padx=10, pady=5)
+
+        # Exit API Button (no EMG Pairing)
+        tk.Button(
+            pair_btn_frame,
+            text="Exit Pairing Window",
+            font=FONTS['button'],
+            bg=COLORS['danger'],
+            fg=COLORS['text_primary'],
+            activebackground=COLORS['danger_active'],
+            activeforeground=COLORS['text_secondary'],
+            command=window.destroy
+        ).grid(row=0, column=2, padx=10, pady=5)
 
     def _exit_fullscreen(self):
         """Handle exiting fullscreen on Raspberry Pi"""
@@ -139,7 +204,7 @@ class ParticipantApp:
         )
         self.load_btn.grid(row=0, column=0, padx=10, pady=10)
 
-        # Select entry button (blue, depressed initially) (was save_btn)
+        # Change entry entry button (blue, depressed initially) (was save_btn)
         self.save_btn = tk.Button(
             button_frame,
             text="Change Entry",
@@ -148,7 +213,7 @@ class ParticipantApp:
             fg=COLORS['text_primary'],
             activebackground=COLORS['blue_active'],
             activeforeground=COLORS['text_primary'],
-            command=self.Open_entry_only,
+            command=self.trigger_session_change,  # incriments the entry index
             state=tk.DISABLED,
             width=15, height=2,
             relief=tk.SUNKEN
@@ -246,17 +311,51 @@ class ParticipantApp:
             on_success=self.on_login_success
         )
 
-    def Open_entry_only(self):
-        """skips the number pad and goes straigh to entry selection for current participant"""
+    def trigger_session_change(self):
+        """Re-opens the session selection from your existing popup file."""
         if self.current_participant:
-            # we pass the ID to the popup
-            ParticipantLoginPopup(
-                self.root,
-                self.data_manager,
-                on_success=self.on_login_success,
-                participant_id=self.current_participant,
-                force_new_entry=True
+            # 1. Start the popup handler
+            popup = ParticipantLoginPopup(
+                self.root, self.data_manager,
+                on_success=self.on_login_success
             )
+            
+            # 2. THE TRICK: Reach into the popup we just made, 
+            # set the ID and Entry to the current ones, 
+            # and jump straight to the session screen.
+            popup.selected_participant = self.current_participant
+            popup.selected_entry_index = self.current_entry_index
+            
+            # Close the number pad that automatically opened
+            popup.popup.destroy() 
+            
+            # Ask the data manager for the sessions and show that screen
+            entries = self.data_manager.get_participant_entries(self.current_participant)
+            sessions = entries[self.current_entry_index]["sessions"]
+            popup._show_session_selection_popup(sessions)
+
+    def Open_entry_only(self): # maybe won't need
+        """
+        Increments the entry index (0=Baseline, 1-3=Trials) 
+        without restarting the whole login process.
+        """
+        if self.current_participant:
+            # Increment index (0, 1, 2, 3)
+            # This handles your 4 entries (Baseline + 3 normal)
+            if self.current_entry_index < 3:
+                self.current_entry_index += 1
+                
+                # Update the display
+                self.update_status()
+                
+                # Feedback to user
+                entry_label = "Baseline" if self.current_entry_index == 0 else f"Trial {self.current_entry_index}"
+                #messagebox.showinfo("Entry Changed", f"Switched to {entry_label}")
+            else:
+                # If they hit the limit, offer to restart at Baseline or stay put
+                if messagebox.askyesno("Session Limit", "All 4 entries completed. Restart at Baseline?"):
+                    self.current_entry_index = 0
+                    self.update_status()
 
     def on_login_success(self, participant_id, entry_index, session):
         """Called when user successfully logs in and selects a session."""
@@ -280,11 +379,11 @@ class ParticipantApp:
             relief=tk.RAISED
         )
 
-        messagebox.showinfo(
-            "Ready",
-            f"Participant: {participant_id}\n"
-            f"Entry: {entry_index + 1}\nMode: {session}"
-        )
+        #messagebox.showinfo(
+        #    "Ready",
+        #    f"Participant: {participant_id}\n"
+        #    f"Entry: {entry_index + 1}\nMode: {session}"
+        #)
 
     def load_csv_file(self):  # not used
         """Open file dialog, load CSV, and display plot."""
@@ -399,10 +498,11 @@ class ParticipantApp:
     def update_status(self):
         """Update status bar with current participant/entry/session info."""
         if self.current_participant and self.current_session:
+            entry_display = "Baseline" if self.current_entry_index == 0 else f"Trial {self.current_entry_index}"
             status_text = (
                 f"Participant: {self.current_participant} | "
-                f"Entry: {self.current_entry_index + 1} | "
-                f"Session: {self.current_session}"
+                f"Entry: {self.current_entry_index + 1} | " #there is a naming issue, ths variable refers to a session, not an entry
+                f"Session: {self.current_session}"              #same as above, but inverted   self.current_entry_index + 1
             )
         elif self.current_participant:
             status_text = f"Participant: {self.current_participant} | No session selected"
@@ -431,7 +531,7 @@ class ParticipantApp:
         self.load_btn.config(state=tk.DISABLED, text="Running...")
         self.save_btn.config(state=tk.DISABLED)
         self.change_participant_btn.config(state=tk.DISABLED)
-        self.exit_btn.config(state=tk.DISABLED) #prevents exit while entry is running
+        # self.exit_btn.config(state=tk.DISABLED) #prevents exit while entry is running
 
         # start the loop
         self.run_trial_cycle()
@@ -463,7 +563,7 @@ class ParticipantApp:
         self.load_btn.config(state=tk.NORMAL, text="Start Session")
         self.save_btn.config(state=tk.NORMAL)
         self.change_participant_btn.config(state=tk.NORMAL)
-        self.exit_btn.config(state=tk.NORMAL)
+        # self.exit_btn.config(state=tk.NORMAL)
 
         messagebox.showinfo("Complete", f"Entry complete! {self.total_trials_needed} trials saved.")
 
