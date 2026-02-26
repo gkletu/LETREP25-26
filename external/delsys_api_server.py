@@ -54,10 +54,23 @@ def pair_sensors(sensor_number):
         TrigBase.PairSensor(True)
         TrigBase.PairSensor(sensor_number)
 
+# function to return an array of the sensors paired
+def get_sensor_names():
+    list = TrigBase.GetSensorNames()
+    return list
+
+# function that returns a Bool based if the sensor has paired successfully
+def check_pair_status():
+    paired = TrigBase.CheckPairStatus()
+    return paired
 
 # function to scan for previously paired sensors
 def scan_sensors():
     TrigBase.ScanSensors()
+
+# returns sensors to the stage where they can pair
+def reset_pipeline():
+    TrigBase.ResetPipeline()
 
 # function to initiate data collection
 def start_collect(): 
@@ -108,5 +121,8 @@ if __name__ == "__main__":
     server.register_function(scan_sensors, "scan_sensors")
     server.register_function(start_collect, "start_collect")
     server.register_function(stop_collect, "stop_collect")
+    server.register_function(get_sensor_names, "get_sensor_names")
+    server.register_function(check_pair_status, "check_pair_status")
+    server.register_function(reset_pipeline, "reset_pipeline")
     print("XML-RPC server listening on port 8000...")
     server.serve_forever()
