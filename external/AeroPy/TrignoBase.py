@@ -5,7 +5,7 @@ This class creates an instance of the Trigno base. Put your key and license here
 import threading
 import time
 
-from project.Export.CsvWriter import CsvWriter
+from external.Export.CsvWriter import CsvWriter
 from pythonnet import load
 
 load("coreclr")
