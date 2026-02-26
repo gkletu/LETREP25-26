@@ -8,7 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import sys
 import subprocess
 import os
-
+import ctypes
 # REMOVED: from win32inetcon import API_WRITE_DATA  # Windows-only library
 
 #===========================
@@ -22,6 +22,7 @@ from toolbox import delsys_api_client as api
 from analysis.session_logic import SessionManager
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from analysis.plotter import LivePlotter # the live plotter class from the plotter.py
+motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
 
 #======================
 # Import Theme
@@ -82,13 +83,14 @@ class ParticipantApp:
         self._create_plot_frame()
 
         #--------Run on Startup--------
+        # self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
         self.root.after(100, self.Load_API)  #Launches API on start up
 
     def Load_API(self):  # Loads EMG API (change name of API file)
         # Now we're going to build a GUI
         window = tk.Tk()
         window.title("LETREP26 Pair EMGs...")
-        window.geometry("960x540")
+        window.geometry("400x450")
         window.resizable(False, False)
         window.configure(bg=COLORS['bg_main'])
 
@@ -110,7 +112,7 @@ class ParticipantApp:
             borderwidth=2,
             bg=COLORS['bg_raised']
         )
-        pair_btn_frame.pack(padx=10, pady=10)
+        pair_btn_frame.pack(padx=15, pady=15)
 
         # Pair Sensors Button
         tk.Button(
@@ -122,7 +124,7 @@ class ParticipantApp:
             activebackground=COLORS['purple_active'],
             activeforeground=COLORS['text_secondary'],
             command=lambda: api.pair_sensors(window)
-        ).grid(row=0, column=0, padx=10, pady=5)
+        ).grid(row=0, column=0, padx=20, pady=15, ipadx=15, ipady=15)
 
         # Scan Sensors Button
         tk.Button(
@@ -134,7 +136,7 @@ class ParticipantApp:
             activebackground=COLORS['blue_active'],
             activeforeground=COLORS['text_secondary'],
             command=api.scan_sensors
-        ).grid(row=0, column=1, padx=10, pady=5)
+        ).grid(row=1, column=0, padx=20, pady=15, ipadx=15, ipady=15)
 
         # Exit API Button (no EMG Pairing)
         tk.Button(
@@ -146,7 +148,7 @@ class ParticipantApp:
             activebackground=COLORS['danger_active'],
             activeforeground=COLORS['text_secondary'],
             command=window.destroy
-        ).grid(row=0, column=2, padx=10, pady=5)
+        ).grid(row=2, column=0, padx=20, pady=15, ipadx=15, ipady=15)
 
     def _exit_fullscreen(self):
         """Handle exiting fullscreen on Raspberry Pi"""
@@ -207,7 +209,7 @@ class ParticipantApp:
         # Change entry entry button (blue, depressed initially) (was save_btn)
         self.save_btn = tk.Button(
             button_frame,
-            text="Change Entry",
+            text="Change Session",
             font=FONTS['button'],
             bg=COLORS['blue_active'],
             fg=COLORS['text_primary'],
@@ -470,7 +472,7 @@ class ParticipantApp:
         # Back button
         tk.Button(
             button_frame,
-            text="Back",
+            text="No",
             font=FONTS['button'],
             bg=COLORS['danger'],
             fg=COLORS['text_primary'],
@@ -484,7 +486,7 @@ class ParticipantApp:
         # Quit button
         tk.Button(
             button_frame,
-            text="Quit",
+            text="Yes",
             font=FONTS['button'],
             bg=COLORS['success'],
             fg=COLORS['text_primary'],

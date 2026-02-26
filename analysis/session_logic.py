@@ -65,22 +65,23 @@ class SessionManager:
     def _trial_worker(self):
         """this works in parallel to the GUI via threading"""
         # collect data (where motor code and sensor code will live
-        motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working2.so")
+        motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
 
-        motor.setup()                                   
-        #motor.acceleration_velocity_set(1000,500)		#slow down velocity
-        #motor.move_counts(0,1)                          #ensure motor is at home
-        #time.sleep(1.5)
-        #motor.move_counts(-8000,1)                      #move to 45 deg
+        #initiate and home motors giving a 30000 ms window
+        motor.setup_and_home(30000)                     #allow motor to find home position
+        motor.acceleration_velocity_set(1000,500)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
+        motor.move_counts(-8000,1)                      #move to 45 degrees
+        time.sleep(2)                                   #wait for 2 seconds
 
         # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
-        #motor.move_speed(200) # move at 200 rpm
-        #time.sleep(1)   # for 1 second
+        motor.acceleration_velocity_set(500, 30)        #set acceleration and velocity limits to 500rpm/s and 30rpm (slow movement)
+        motor.move_speed(30)                            #move at 30 rpm                            
+        time.sleep(1)                                   #move for 1 second (check if it acts as a delay or pause)
 
-        # self.motor_library.move_to_start()
-        #motor.acceleration_velocity_set(-8000, -500) #set acceleration to 8000 and velocity to 500
-        motor.move_counts(0,1)							#extend to home position
-        time.sleep(3)									#delay for 3/10 of a second
+        # Reflex induction
+        motor.acceleration_velocity_set(2000, 500)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
+        motor.move_counts(1000, 1)                      #move to 1000 counts offset from home
+        time.sleep(3)                                   #wait for 3 seconds 
 
         #motor.shutdown_node()
 
