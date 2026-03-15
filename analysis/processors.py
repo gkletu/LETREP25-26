@@ -1,3 +1,4 @@
+# processors.py 
 # handles all the math, rectify, max, and threshold
 
 import numpy as np
@@ -5,58 +6,73 @@ import pandas as pd
 from scipy import signal
 
 def analize_trial(emg_df, force_data, active_threshold=0):
-    # Processes a single trial
-    # emg_data: raw EMG dataframe
-    # force_data: raw force data
-    # active_threshold: 65% the baseline average for comparison
-
-    # Extract list of EMG magnitude from EMG dataframe
-    emg_values = emg_df['value'].tolist()
-
-    # Preprocessing EMG Data  
-    emg_fs = 2148.148 # Sampling frequency of EMG sensor
-    rectified_emg = np.abs(emg_values)
-    emg_envelope = scipy.signal.savgol_filter(rectified, window_length=int(0.2*emg_fs)|1, polyorder=3)
-
-    # Restrict to Reflex Window (t0 is the time at which the stretch reflex is induced)
-    # Adjust t0 as needed to account for motor delay. Reflex is typically 15-50 ms after stretch
-    emg_start = int(t0 + 0.015 * emg_fs) 
-    emg_end = int(t0 + 0.050 * emg_fs)
-    emg_segment = envelope[start:end] # isolate the time window with only the reflex
-
-    # EMG Peak Detection
-    emg_peaks = find_peaks(
-        emg_segment, # time window with only the reflex
-        prominence = 0.1*np.max(emg_envelope), # peak must stand out by at least 10%
-        distance = int(0.2 * emg_fs), # Ensures that peaks are at least 20 ms apart
-        width = int(0.005 * emg_fs), # Requires peaks to be at  least 5 ms wide
-    )
+    """
+    Processes a single trial.
+    emg_df: pandas DataFrame with ['value'] column
+    force_data: list or numpy array (can be empty [])
+    active_threshold: float (comparison for success)
+    """
+    # ==========================================
+    # 1. EMG PROCESSING
+    # ==========================================
+    emg_fs = 2148.148 
+    emg_values = emg_df['value'].values # Use .values for speed
     
-    # EMG Max
-    max_emg = np.max(emg_peaks)
+    # Rectify and filter
+    rectified_emg = np.abs(emg_values)
+    # window_length must be odd. 0.2s * fs | 1 ensures it's odd.
+    emg_envelope = signal.savgol_filter(rectified_emg, window_length=int(0.2*emg_fs)|1, polyorder=3)
 
-    # Preprocessing Force Data
-    force_fs = 115200
-    force_envelope = savgol_filter(force_signal, window_length=int(0.2*force_fs)|1, polyorder=3)
+    # Isolate Reflex Window (15ms to 50ms)
+    emg_start = int(0.015 * emg_fs) 
+    emg_end = int(0.050 * emg_fs)
+    emg_segment = emg_envelope[emg_start:emg_end]
 
-    # Restrict to Reflex Window
-    force_start = int(t0 + 0.015*fs)  # 15 ms after stimulus
-    force_end   = int(t0 + 0.050*fs)  # 50 ms after stimulus
-    force_segment = force_envelope[start:end]
+    # Peak Detection
+    peaks, _ = signal.find_peaks(
+        emg_segment,
+        prominence=0.1 * np.max(emg_envelope) if len(emg_envelope) > 0 else 0,
+        distance=int(0.02 * emg_fs),
+        width=int(0.005 * emg_fs),
+    )
 
-    # Force Peak Detection
-    force_peaks = find_peaks(
-    segment,
-    prominence=0.05 * np.max(force_envelope),  # 5–10% of max force
-    distance=int(0.02 * fs),                   # 20 ms minimal spacing
-    width=int(0.005 * fs),                     # minimum 5 ms width
-)
+    # Calculate max_emg from actual voltages at peak indices
+    if len(peaks) > 0:
+        max_emg = float(np.max(emg_segment[peaks]))
+    else:
+        max_emg = 0.0
 
-    # Force Max
-    max_force = np.max(force_peaks)
+    # ==========================================
+    # 2. FORCE PROCESSING (Safe for Empty Arrays)
+    # ==========================================
+    max_force = 0.0
+    
+    if len(force_data) > 0:
+        force_fs = 115200
+        # Convert to numpy array just in case it's a list
+        force_array = np.array(force_data)
+        
+        force_envelope = signal.savgol_filter(force_array, window_length=int(0.2*force_fs)|1, polyorder=3)
 
-    # Threshold logic
-    # is_success = True if max_emg < threshold
+        force_start = int(0.015 * force_fs)
+        force_end = int(0.050 * force_fs)
+        
+        # Ensure we don't slice out of bounds
+        if len(force_envelope) > force_end:
+            force_segment = force_envelope[force_start:force_end]
+            f_peaks, _ = signal.find_peaks(
+                force_segment,
+                prominence=0.05 * np.max(force_envelope),
+                distance=int(0.02 * force_fs),
+                width=int(0.005 * force_fs),
+            )
+            if len(f_peaks) > 0:
+                max_force = float(np.max(force_segment[f_peaks]))
+
+    # ==========================================
+    # 3. SUCCESS LOGIC & RETURN
+    # ==========================================
+    # is_success is True if max_emg is strictly less than threshold
     is_success = max_emg < active_threshold if active_threshold > 0 else True
    
     return {
@@ -81,7 +97,7 @@ def threshold_adjust(session_success_list, current_threshold):
         return current_threshold
     
     total_trials = len(session_success_list)
-    success_count = session_success_list(True)
+    success_count = session_success_list.count(True)
     success_rate = success_count / total_trials
 
     if success_rate >= 0.75:

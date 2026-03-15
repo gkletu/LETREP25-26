@@ -1,6 +1,6 @@
+# participant_manager.py
 # ============================================================
 # PARTICIPANT DATA MANAGER MODULE
-# File: participant_manager.py
 # ============================================================
 # This module handles all participant data management:
 # - File/folder structure creation
@@ -164,13 +164,12 @@ class ParticipantDataManager:
     # ============================================================
 
     def get_participant_entries(self, participant_id):
-        """Get all entries for a specific participant"""
-        data = self.participants_data.get(participant_id, [])
-
-        if isinstance(data, dict):
-            return data.get("entries",[])
-        
-        return data
+        """Standardized to handle only the dictionary structure."""
+        data = self.participants_data.get(participant_id, {"entries": [], "active_threshold": 0.0})
+        # If it's old legacy data (a list), convert it on the fly
+        if isinstance(data, list):
+            return data
+        return data.get("entries", [])
 
     # ============================================================
     # ENTRY CREATION METHODS
@@ -329,14 +328,12 @@ class ParticipantDataManager:
         return 0.0
     
     def update_threshold(self, participant_id, new_threshold):
-        """
-        Updates the participant's threshold in JSON log.
-        """
+        """Ensures structure is always {'entries': [...], 'active_threshold': 0.0}"""
         if participant_id not in self.participants_data:
             self.participants_data[participant_id] = {"entries": [], "active_threshold": 0.0}
-
-        current_data = self.participants_data[participant_id]
         
+        # Handle the case where the data might currently be a list
+        current_data = self.participants_data[participant_id]
         if isinstance(current_data, list):
             self.participants_data[participant_id] = {
                 "entries": current_data,
@@ -346,7 +343,6 @@ class ParticipantDataManager:
             self.participants_data[participant_id]["active_threshold"] = round(new_threshold, 4)
 
         self.save_data()
-        print(f"Threshold for {participant_id} updated to: {new_threshold}")
 
 # ============================================================
 # MODULE TEST (Optional)

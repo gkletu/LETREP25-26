@@ -1,3 +1,4 @@
+# delsys_api_client.py
 import xmlrpc.client
 import tkinter as tk
 from tkinter import simpledialog
@@ -35,5 +36,3 @@ def stop_collect():
         "value": values    
     })
     return result
-    
-

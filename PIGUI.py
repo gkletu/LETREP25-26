@@ -1,3 +1,4 @@
+# PIGUI.py
 #======================
 # Main GUI - Raspberry Pi Version (no API)
 # needs serial com for force, and network com for EMG
@@ -39,56 +40,59 @@ class ParticipantApp:
     """
 
     def __init__(self, root):
-        """Initializes main window"""
         self.root = root
-        self.root.title('LETREP26 GUI')
-        
-        # Modified fullscreen for Raspberry Pi 5 / wayland  # different window commands than normal linux or pi 3 for some reason
-        # 1. Basic configuration
+        self.root.title("LETREP - Reflex Induction System 2026")
+        self.root.geometry("1200x800")
         self.root.configure(bg=COLORS['bg_main'])
 
-        # 2. Force the window to initialize so Linux/Wayland recognizes it
-        self.root.update_idletasks()
-
-        # 3. Apply Fullscreen Logic for Pi 5 / Wayland
-        try:
-            # This is the standard request
-            self.root.attributes('-fullscreen', True)
-            
-            # If standard fullscreen is ignored by Wayland,this forces the window to at least fill the usable space
-            self.root.state('zoomed') 
-            
-            # OPTIONAL: Uncomment the line below for "Kiosk" mode (hides top bar)
-            self.root.overrideredirect(True) 
-        except tk.TclError as e:
-            print(f"Window scaling error: {e}")
-
-        # Bind Escape key to exit fullscreen
-        self.root.bind("<Escape>", lambda e: self._exit_fullscreen())
-
-        # -------State variables-------
-        self.current_participant = None
-        self.current_entry_index = 0
-        self.current_session = None
-        self.current_csv_path = None
-        self.trial_in_progress = False
-
-        #-------Initialize data manager-------
+        # 1. Initialize Managers
         self.data_manager = ParticipantDataManager()
-        self.sm = SessionManager(self.data_manager, self.update_ui_callback)
+        self.session_manager = SessionManager(self.data_manager, self.update_ui_callback)
 
-        #--------Build UI components--------
-        self._create_status_bar()
-        self._create_button_frame()
-        self._create_plot_frame()
+        # 2. Build the Main UI (Buttons, Plot, Stats)
+        self._setup_styles()
+        self._create_layout()  # Your main dashboard layout
+        self._create_hardware_sidebar() # The utility menu we discussed
 
-        #--------Run on Startup--------
-        # self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
-        self.root.after(100, self.Load_API)  #Launches API on start up
+        # 3. Create the "Initialization Overlay"
+        # This keeps the user informed while the main window is visible but 'busy'
+        self.init_frame = tk.Frame(self.root, bg=COLORS['bg_raised'], relief=tk.RIDGE, bd=2)
+        self.init_frame.place(relx=0.5, rely=0.05, anchor='n', width=400, height=50)
+        
+        self.init_label = tk.Label(
+            self.init_frame, text="⚙️ INITIALIZING MOTOR: PLEASE WAIT...", 
+            font=FONTS['label_1'], bg=COLORS['bg_raised'], fg=COLORS['text_primary']
+        )
+        self.init_label.pack(expand=True)
+
+        # 4. Trigger the non-blocking Hardware Sequence
+        threading.Thread(target=self._startup_hardware_logic, daemon=True).start()
+
+    def _startup_hardware_logic(self):
+        """Threaded: Safe homing followed by EMG Pairing."""
+        try:
+            # A. Home the motor (30 second block in this thread only)
+            motor.setup_and_home(30000)
+            
+            # B. Switch to EMG Pairing Step
+            self.root.after(0, lambda: self.init_label.config(
+                text="📡 MOTOR READY: OPENING EMG PAIRING...", fg=COLORS['success']
+            ))
+            
+            # C. Open the Toplevel Pairing Window
+            self.root.after(1500, self.Load_API)
+            
+            # D. Hide the initialization frame after a delay
+            self.root.after(5000, self.init_frame.place_forget)
+            
+        except Exception as e:
+            self.root.after(0, lambda: self.init_label.config(
+                text=f"⚠️ HARDWARE ERROR: {e}", fg=COLORS['danger']
+            ))
 
     def Load_API(self):  # Loads EMG API (change name of API file)
         # Now we're going to build a GUI
-        window = tk.Tk()
+        window = tk.Toplevel(self.root)
         window.title("LETREP26 Pair EMGs...")
         window.geometry("400x450")
         window.resizable(False, False)
@@ -566,6 +570,8 @@ class ParticipantApp:
         self.save_btn.config(state=tk.NORMAL)
         self.change_participant_btn.config(state=tk.NORMAL)
         # self.exit_btn.config(state=tk.NORMAL)
+
+        motor.shutdown_node() 
 
         messagebox.showinfo("Complete", f"Entry complete! {self.total_trials_needed} trials saved.")
 

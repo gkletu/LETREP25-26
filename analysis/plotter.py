@@ -1,3 +1,4 @@
+# plotter.py
 # matplotlib functions for plotting data in the main GUI
 import matplotlib
 matplotlib.use('TkAgg')
@@ -78,4 +79,3 @@ class LivePlotter:
 
         # redraw only the canvas
         self.fig.canvas.draw_idle()
-

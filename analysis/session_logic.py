@@ -1,3 +1,4 @@
+ # session_logic.py
  # runs the loops and runs the motors for the ctypes
 
 import time
@@ -13,6 +14,9 @@ from analysis import processors
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from toolbox import delsys_api_client as api
 from toolbox.participant_manager import ParticipantDataManager
+
+# collect data (where motor code and sensor code will live
+motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
 
 class SessionManager:
     def __init__(self, data_manager: ParticipantDataManager, gui_callback):
@@ -63,49 +67,63 @@ class SessionManager:
         return True
     
     def _trial_worker(self):
-        """this works in parallel to the GUI via threading"""
-        # collect data (where motor code and sensor code will live
-        motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
+        """Runs in parallel to the GUI. Executes motor sequence, saves data, and triggers next trial."""
+        try:
+            # 1. INITIAL MOVEMENT: Move to 45 degrees
+            motor.acceleration_velocity_set(2000, 50)
+            motor.move_counts(-8000, 1)                      
+            time.sleep(2)                                   
 
-        #initiate and home motors giving a 30000 ms window
-        motor.setup_and_home(30000)                     #allow motor to find home position
-        motor.acceleration_velocity_set(1000,500)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
-        motor.move_counts(-8000,1)                      #move to 45 degrees
-        time.sleep(2)                                   #wait for 2 seconds
+            # 2. PRE-TRIAL: Slow pre-load movement
+            motor.acceleration_velocity_set(8000, 30)        
+            motor.move_speed(30)                            
+            time.sleep(0.5)                                   
 
-        # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
-        motor.acceleration_velocity_set(500, 30)        #set acceleration and velocity limits to 500rpm/s and 30rpm (slow movement)
-        motor.move_speed(30)                            #move at 30 rpm                            
-        time.sleep(1)                                   #move for 1 second (check if it acts as a delay or pause)
+            # 3. REFLEX INDUCTION: Fast quick movement
+            motor.acceleration_velocity_set(8000, 1000)      
+            motor.move_counts(-1000, 1)                      
+            
+            # 4. DATA COLLECTION: Collect 2.0s of data during/after reflex
+            raw_emg, raw_force = self._collect_data_samples()          
+            time.sleep(3) # Wait for motor to finish and system to settle
 
-        # Reflex induction
-        motor.acceleration_velocity_set(2000, 500)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
-        motor.move_counts(1000, 1)                      #move to 1000 counts offset from home
-        time.sleep(3)                                   #wait for 3 seconds 
+            # 5. ANALYSIS & SAVING
+            results = processors.analize_trial(raw_emg, raw_force, self.active_threshold)
+            self.session_maxes.append(results['max_emg'])
+            self.success_history.append(results['is_success'])
+            
+            self._temp_save_and_move(
+                self.p_id, self.entry_idx, self.sess_type, 
+                self.current_trial_num, raw_emg, raw_force
+            )
+            
+            # 6. UI UPDATE
+            successes = self.success_history.count(True)
+            fails = self.success_history.count(False)
+            self.gui_update(self.session_maxes, self.active_threshold, successes, fails)
 
-        #motor.shutdown_node()
+            # 7. MOTOR RESET: Return to start position so next trial is accurate
+            # We move +9000 to offset the -8000 and -1000 moves above
+            motor.acceleration_velocity_set(2000, 50)
+            motor.move_counts(9000, 1) 
+            time.sleep(1)
 
-        # DATA COLLECTION 
-        # This calls the bridge function below
-        raw_emg, raw_force = self._collect_data_samples()
+            # 8. THE LOOP LOGIC: Check if we need more trials
+            if self.current_trial_num >= self.total_trials_needed:
+                # End of session math (calculates new threshold)
+                self._handle_end_of_session_math()
+                print(f"Session Complete: {self.total_trials_needed} trials recorded.")
+            else:
+                # INTER-TRIAL INTERVAL: 5-second rest for participant
+                time.sleep(4) 
+                
+                # BATON PASS: Tell the main GUI thread to start the next trial
+                # We use root.after because we can't start a new thread FROM this thread safely
+                self.dm.root.after(100, self.run_single_trial)
 
-        # ANALYSIS & SAVING
-        results = analize_trial(raw_emg, raw_force, self.active_threshold)
-        self.session_maxes.append(results['max_emg'])
-        self.success_history.append(results['is_success'])
-        
-        self._temp_save_and_move(
-            self.p_id, self.entry_idx, self.sess_type, 
-            self.current_trial_num, raw_emg, raw_force
-        )
-        
-        # UI UPDATE
-        successes = self.success_history.count(True)
-        fails = self.success_history.count(False)
-        self.gui_update(self.session_maxes, self.active_threshold, successes, fails)
-
-        if self.current_trial_num >= self.total_trials_needed:
-            self._handle_end_of_session_math()
+        except Exception as e:
+            print(f"Critical error in trial {self.current_trial_num}: {e}")
+            # Optionally call a GUI error handler here
     
     def _handle_end_of_session_math(self):
         """
@@ -123,37 +141,41 @@ class SessionManager:
 
 
     def _collect_data_samples(self):
-        # Placeholder for real sensor polling
-        
-        api.start_collect() # begins data collection for emg sensors
-        duration = 2.0 # duration of emg collection in trial (seconds)
-        time.sleep(duration) # wait for duration 
+        """Begins data collection for sensors and returns the datasets."""
+        api.start_collect() 
+        duration = 2.0 
+        time.sleep(duration) 
 
-        emg_data = api.stop_collect() # returns the emg data from the trial as a dataframe
+        # This returns a DataFrame with columns: samples, time, value
+        emg_data = api.stop_collect() 
         
-        force_data = []
-        
-        # Example Logic
-        # duration = 2.0 # in seconds I think
-        # start = time.time()
-        # while (time.time() - start) < duration:
-        #    force_data.append(self.serial_port.read())
-        #    emg_data.append(self.socket.recv())
+        # Placeholder for force data as an empty list
+        force_data = [] 
          
-        return emg_data, [5.0, 5.5, 5.1] # (emg, force)
-    
-    def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
+        return emg_data, force_data
+
+    def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg_df, force):
         """
-        Creates temp file so the participant manager can move it to its final home.
+        Saves the DataFrame to a CSV without losing data rows, 
+        then moves it to the permanent participant folder.
         """
         temp_name = f"temp_trial_{trial_num}.csv"
-        with open(temp_name, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["EMG", "Force"])
-            writer.writerows(zip(emg, force))
 
-        # Call existing "save_csv_to_session" from participant_manager.py
-        self.dm.save_csv_to_session(p_id, entry_idx, sess_type, temp_name) # fix .dm to .pm
+        # If force is empty, we add a placeholder column to the DataFrame 
+        # so the CSV structure remains consistent for future analysis.
+        if not force:
+            emg_df['force_placeholder'] = 0.0
+        else:
+            # If you eventually have force data, you'd handle length matching here.
+            # For now, we ensure the EMG data is preserved entirely.
+            pass
 
+        # Save the entire DataFrame to CSV
+        emg_df.to_csv(temp_name, index=False)
+
+        # Use the data manager to move the file to the correct participant directory
+        self.dm.save_csv_to_session(p_id, entry_idx, sess_type, temp_name)
+
+        # Cleanup the temporary file
         if os.path.exists(temp_name):
             os.remove(temp_name)
