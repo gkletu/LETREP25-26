@@ -10,6 +10,7 @@ import sys
 import subprocess
 import os
 import ctypes
+import threading
 # REMOVED: from win32inetcon import API_WRITE_DATA  # Windows-only library
 
 #===========================
@@ -50,9 +51,9 @@ class ParticipantApp:
         self.session_manager = SessionManager(self.data_manager, self.update_ui_callback)
 
         # 2. Build the Main UI (Buttons, Plot, Stats)
-        self._setup_styles()
-        self._create_layout()  # Your main dashboard layout
-        self._create_hardware_sidebar() # The utility menu we discussed
+        #self._setup_styles()
+        #self._create_layout()  # Your main dashboard layout
+        #self._create_hardware_sidebar() # The utility menu we discussed
 
         # 3. Create the "Initialization Overlay"
         # This keeps the user informed while the main window is visible but 'busy'
