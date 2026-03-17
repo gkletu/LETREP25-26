@@ -69,7 +69,7 @@ class SessionManager:
 
         #initiate and home motors giving a 30000 ms window
         motor.setup_and_home(30000)                     #allow motor to find home position
-        motor.acceleration_velocity_set(500,100)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
+        motor.acceleration_velocity_set(1000,100)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
         motor.move_counts(-8000,1)                      #move to 45 degrees
         time.sleep(2)                                   #wait for 2 seconds
 
@@ -82,7 +82,7 @@ class SessionManager:
         motor.acceleration_velocity_set(2000, 500)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
         api.start_collect() # begins data collection for emg sensors
         motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
-        time.sleep(2.0)
+        time.sleep(2)
         raw_emg = api.stop_collect()
 
         # DATA COLLECTION 

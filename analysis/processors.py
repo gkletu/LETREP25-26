@@ -12,7 +12,9 @@ def analize_trial(emg_df, force_data, active_threshold=0):
 
     # Extract list of EMG magnitude from EMG dataframe
     emg_values = emg_df["value"].tolist()
+    emg_values = np.array(emg_values, dtype = float)
     emg_values = emg_values * 1000  # Convert Volts to Millivolts
+    
 
     ## print(f"Unprocessed EMG data \n\n\n{emg_values}\n\n")   # For Debugging
 
@@ -97,7 +99,7 @@ def threshold_adjust(session_success_list, current_threshold):
         return current_threshold
     
     total_trials = len(session_success_list)
-    success_count = session_success_list(True)
+    success_count = session_success_list.count(True)
     success_rate = success_count / total_trials
 
     if success_rate >= 0.75:
