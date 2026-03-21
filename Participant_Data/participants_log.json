@@ -339,6 +339,16 @@
             ],
             "created": "2026-03-15T19:02:01.749626",
             "entry_folder": "Participant_Data/Participant_01/entry1"
+        },
+        {
+            "entry_number": 2,
+            "sessions": [
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-17T14:43:26.028197",
+            "entry_folder": "Participant_Data/Participant_01/entry2"
         }
     ],
     "02": [

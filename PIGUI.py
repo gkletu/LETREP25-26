@@ -9,6 +9,7 @@ import sys
 import subprocess
 import os
 import ctypes
+import serial
 # REMOVED: from win32inetcon import API_WRITE_DATA  # Windows-only library
 
 #===========================
@@ -83,8 +84,14 @@ class ParticipantApp:
         self._create_plot_frame()
 
         #--------Run on Startup--------
-        # self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
+        self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
         self.root.after(100, self.Load_API)  #Launches API on start up
+    
+    def Load_Force(self):   # Establishes Serial Comm for force reading
+        SERIAL_PORT = '/dev/ttyUSB0'    # Verify using lsusb
+        BAUD_RATE =  2148.148   # Must match Baud rate of ESP32
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout = 0.01)
+        time.sleep(2)
 
     def Load_API(self):  # Loads EMG API (change name of API file)
         # Now we're going to build a GUI

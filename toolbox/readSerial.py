@@ -8,7 +8,7 @@ from collections import deque
 
 # --- Settings ---
 SERIAL_PORT = '/dev/ttyUSB0'
-BAUD_RATE = 115200      # High-speed serial
+BAUD_RATE =  2148.148     # High-speed serial
 BUFFER_SIZE = 1000      # Number of points to keep in live plot
 
 # --- Serial Setup ---

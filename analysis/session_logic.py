@@ -68,27 +68,27 @@ class SessionManager:
         motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
 
         #initiate and home motors giving a 30000 ms window
-        motor.setup_and_home(30000)                     #allow motor to find home position
+        # motor.setup_and_home(30000)                     #allow motor to find home position
         motor.acceleration_velocity_set(1000,100)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
         motor.move_counts(-8000,1)                      #move to 45 degrees
-        time.sleep(2)                                   #wait for 2 seconds
+        time.sleep(1)                                   #wait for 2 seconds
 
         # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
         motor.acceleration_velocity_set(500, 30)        #set acceleration and velocity limits to 500rpm/s and 30rpm (slow movement)
         motor.move_speed(30)                            #move at 30 rpm                            
-        time.sleep(1)                                   #move for 1 second (check if it acts as a delay or pause)
+        time.sleep(.75)                                   #move for 1 second (check if it acts as a delay or pause)
         
         # Reflex induction and EMG Data Collection
-        motor.acceleration_velocity_set(2000, 500)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
+        motor.acceleration_velocity_set(4000, 2000)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
         api.start_collect() # begins data collection for emg sensors
         motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
-        time.sleep(2)
+        time.sleep(.5)
         raw_emg = api.stop_collect()
 
         # DATA COLLECTION 
         # This calls the bridge function below
-        raw_force = self._collect_data_samples() # Should be raw_emg, raw_force = 
-        time.sleep(1)                                   #wait for 1 seconds 
+        raw_force = self._collect_force_samples() # Should be raw_emg, raw_force = 
+        time.sleep(.5)                                   #wait for 1 seconds 
         # motor.shutdown_node()
 
         raw_force = [] # For debugging
@@ -126,7 +126,7 @@ class SessionManager:
             self.dm.update_threshold(self.p_id, new_t)
 
 
-    def _collect_data_samples(self):
+    def _collect_force_samples(self):
         # Placeholder for real sensor polling
         
         # api.start_collect() # begins data collection for emg sensors
