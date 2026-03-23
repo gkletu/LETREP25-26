@@ -62,10 +62,18 @@ class SessionManager:
         
         return True
 
+    def _force_collection_worker(self):
+        while api.get_sensor_status() == "Running":
+            sample = self._collect_force_sample()
+            if sample != None:
+                self.raw_force.append(self._collect_force_sample())
+
     def _trial_worker(self):
         """this works in parallel to the GUI via threading"""
         # collect data (where motor code and sensor code will live
         motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
+
+        self.raw_force = []  # Clears the Force Data array before collection
 
         #initiate and home motors giving a 30000 ms window
         # motor.setup_and_home(30000)                     #allow motor to find home position
@@ -81,26 +89,25 @@ class SessionManager:
         # Reflex induction and EMG Data Collection
         motor.acceleration_velocity_set(4000, 2000)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
         api.start_collect() # begins data collection for emg sensors
+        force_thread = threading.Thread(target = self._force_collection_worker)
+        force_thread.start()
         motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
         time.sleep(.5)
         raw_emg = api.stop_collect()
+        force_thread.join() # Kills the force sampling thread and returns the data
 
-        # DATA COLLECTION 
         # This calls the bridge function below
-        raw_force = self._collect_force_samples() # Should be raw_emg, raw_force = 
         time.sleep(.5)                                   #wait for 1 seconds 
         # motor.shutdown_node()
 
-        raw_force = [] # For debugging
-
         # ANALYSIS & SAVING
-        results = processors.analize_trial(raw_emg, raw_force, self.active_threshold)
+        results = processors.analize_trial(raw_emg, self.raw_force, self.active_threshold)
         self.session_maxes.append(results["max_emg"])
         self.success_history.append(results["is_success"])
         
         self._temp_save_and_move(
             self.p_id, self.entry_idx, self.sess_type, 
-            self.current_trial_num, raw_emg, raw_force
+            self.current_trial_num, raw_emg, self.raw_force
         )
         
         # UI UPDATE
@@ -126,25 +133,11 @@ class SessionManager:
             self.dm.update_threshold(self.p_id, new_t)
 
 
-    def _collect_force_samples(self):
-        # Placeholder for real sensor polling
-        
-        # api.start_collect() # begins data collection for emg sensors
-        # duration = 2.0 # duration of emg collection in trial (seconds)
-        # time.sleep(duration) # wait for duration 
-
-        # emg_data = api.stop_collect() # returns the emg data from the trial as a dataframe
-        
-        force_data = []
-        
-        # Example Logic
-        # duration = 2.0 # in seconds I think
-        # start = time.time()
-        # while (time.time() - start) < duration:
-        #    force_data.append(self.serial_port.read())
-        #    emg_data.append(self.socket.recv())
-         
-        return [5.0, 5.5, 5.1] # (emg, force)
+    def _collect_force_sample(self):
+        line_raw = ser.readline().decode('utf-8').strip()
+        if line_raw:
+            value = float(line_raw)
+        return value
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """

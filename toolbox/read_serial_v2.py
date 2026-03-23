@@ -27,4 +27,3 @@ force_reading = []
 while read:
     force_reading.append(read_serial())
     print(f"Force is {force_reading}")
-

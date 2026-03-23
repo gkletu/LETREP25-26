@@ -86,10 +86,11 @@ class ParticipantApp:
         #--------Run on Startup--------
         self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
         self.root.after(100, self.Load_API)  #Launches API on start up
+        serl.root.after(100, self.Load_Force)   # Initializes the Serial Comm
     
     def Load_Force(self):   # Establishes Serial Comm for force reading
         SERIAL_PORT = '/dev/ttyUSB0'    # Verify using lsusb
-        BAUD_RATE =  2148.148   # Must match Baud rate of ESP32
+        BAUD_RATE =  9600   # Must match Baud rate of ESP32
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout = 0.01)
         time.sleep(2)
 
