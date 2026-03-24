@@ -52,39 +52,42 @@ def analize_trial(emg_df, force_data, active_threshold=0):
     print(f"\n\tMaxes:\n\n{max_emg}")
 
     # Converting force from a list to an np array
+    print(f"Raw Force:{force_data}\n\n\n\n")
     force_data = np.array(force_data, dtype = float)
+    print(f"\n\n\nRaw Force: {force_data} np")
 
     # Preprocessing Force Data
-    force_fs = 2148.148
+    force_fs = 2148
     rectified_force = np.abs(force_data)
-    force_envelope = signal.savgol_filter(force_data, window_length=int(0.2*force_fs)|1, polyorder = 3)
+    # force_envelope = signal.savgol_filter(force_data, window_length=int(0.1*force_fs)|1, polyorder = 3)
 
-    print(f"Preprocessed EMG data:\n\tRectified EMG:\n\n{rectified_force}\n\tEnvelope:\n\n{force_envelope}\n\n")    # debug
+    print(f"Preprocessed Force data:\n\tRectified Force:\n\n{rectified_force}\n\t")   # debug
     
     # Reflex Window for Force will start at EMG Window and last 2x
     force_start = emg_start
-    force_end = 2*emg_end
-    force_segment = force_envelope[force_start:force_end]
+    force_end = emg_end
+    # force_segment = force_envelope[force_start:force_end]
 
-    print(f"\n\n\tSegment:\n\n{force_segment}")
+    # print(f"\n\n\tForce Segment:\n\n{force_segment}")
+
 
     # Force Peak Detection
     # .find_peaks returns (indices, properties). We just want the indices [0]
     force_peaks = signal.find_peaks(
-        force_envelope, 
-        prominence = 0.1*np.max(force_envelope), 
+        rectified_force, 
+        prominence = 0.1*np.max(rectified_force), 
         distance = int(0.2 * force_fs), 
         width = int(0.005 * force_fs), 
     )[0] # <--- Added [0] here to get only the array of indices
 
-    print(f"\t\nPeak Indices:\n\n{force_peaks}\n\n") # debug
+    print(f"\t\nForce Peak Indices:\n\n{force_peaks}\n\n") # debug
     
     # EMG Max
     # Extract the values at those indices, then find the max
     # We use a 'if' check to avoid a crash if no peaks are found
-    max_emg = np.max(force_envelope[force_peaks]) if len(force_peaks) > 0 else 0
+    max_force = np.max(rectified_force[force_peaks]) if len(force_peaks) > 0 else 0
 
-    print(f"\n\tMaxes:\n\n{max_emg}")
+    print(f"\n\tForce Maxes:\n\n{max_force}")
 
     # Threshold logic
     # is_success = True if max_emg < threshold

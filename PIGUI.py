@@ -99,9 +99,10 @@ class ParticipantApp:
             print("x ESP32 not found! Is it plugged in?")
             exit()
         # --- Initialization ---
-        ser = serial.Serial(SERIAL_PORT, 115200, timeout=0.01)
+        self.ser = serial.Serial(SERIAL_PORT, 115200, timeout=0.01)
         time.sleep(2)
         print(f"v Connected to ESP32 on {SERIAL_PORT}")
+        self.sm.ser = self.ser
 
     def Load_API(self):  # Loads EMG API (change name of API file)
         # Now we're going to build a GUI

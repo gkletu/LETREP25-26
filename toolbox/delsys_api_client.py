@@ -21,10 +21,14 @@ def start_collect():
 
 def scan_sensors():
     server.scan_sensors()
+
+def get_pipeline_status():
+    status = server.get_pipeline_state()
+    return status
     
 def stop_collect():
     result = server.stop_collect()
-    
+
     samples = np.frombuffer(result["samples"].data, dtype = result["sample_dtype"])
     timestamps = np.frombuffer(result["timestamps"].data, dtype = result["time_dtype"])
     values = np.frombuffer(result["values"].data, dtype = result["value_dtype"])

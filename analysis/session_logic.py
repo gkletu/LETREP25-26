@@ -20,6 +20,8 @@ class SessionManager:
         data_manager: ParticipantDataManager instance
         gui_callback: A function in the main GUI to update the plot/stats
         """
+        self.lock = threading.Lock() # This should make each thread wait it's turn when making API calls
+
         self.dm = data_manager   #use instance passed from the GUI
         self.gui_update = gui_callback
 
@@ -63,10 +65,17 @@ class SessionManager:
         return True
 
     def _force_collection_worker(self):
-        while api.get_sensor_status() == "Running":
+        # Use the lock to check status safely
+        def check_status():
+            with self.lock:
+                return api.get_pipeline_status()
+
+        while check_status() == "Running":
             sample = self._collect_force_sample()
-            if sample != None:
-                self.raw_force.append(self._collect_force_sample())
+            if sample is not None:
+                self.raw_force.append(sample)
+            # Small sleep to prevent CPU pegging and serial flooding
+            time.sleep(0.01)
 
     def _trial_worker(self):
         """this works in parallel to the GUI via threading"""
@@ -88,12 +97,26 @@ class SessionManager:
         
         # Reflex induction and EMG Data Collection
         motor.acceleration_velocity_set(4000, 2000)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
-        api.start_collect() # begins data collection for emg sensors
+
+        # Debugging Block
+        with self.lock:
+            print(f"{api.get_pipeline_status()}\n\n\n")
+
+
+            api.start_collect() # begins data collection for emg sensors
+
+            print(f"{api.get_pipeline_status()}\n\n\n")
+
+
         force_thread = threading.Thread(target = self._force_collection_worker)
         force_thread.start()
         motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
         time.sleep(.5)
-        raw_emg = api.stop_collect()
+        with self.lock:
+            raw_emg = api.stop_collect()
+
+            print(f"{api.get_pipeline_status()}\n\n\n")
+
         force_thread.join() # Kills the force sampling thread and returns the data
 
         # This calls the bridge function below
@@ -134,10 +157,18 @@ class SessionManager:
 
 
     def _collect_force_sample(self):
-        line_raw = ser.readline().decode('utf-8').strip()
-        if line_raw:
-            value = float(line_raw)
-        return value
+        try:
+            line_raw = self.ser.readline().decode('utf-8').strip()
+            if not line_raw:
+                return None
+            
+            # Split in case of multiple data points in one buffer read
+            if '\r' in line_raw:
+                line_raw = line_raw.split('\r')[0]
+                
+            return float(line_raw)
+        except (ValueError, Exception):
+            return None # Gracefully skip bad data
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """
