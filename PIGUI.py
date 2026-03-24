@@ -10,6 +10,8 @@ import subprocess
 import os
 import ctypes
 import serial
+import serial.tools.list_ports
+import time
 # REMOVED: from win32inetcon import API_WRITE_DATA  # Windows-only library
 
 #===========================
@@ -86,13 +88,20 @@ class ParticipantApp:
         #--------Run on Startup--------
         self.root.after(100, motor.setup_and_home(30000))  #allow motor to find home position  # uncomment after ensuring functionality
         self.root.after(100, self.Load_API)  #Launches API on start up
-        serl.root.after(100, self.Load_Force)   # Initializes the Serial Comm
+        self.root.after(100, self.Load_Force)   # Initializes the Serial Comm
     
     def Load_Force(self):   # Establishes Serial Comm for force reading
-        SERIAL_PORT = '/dev/ttyUSB0'    # Verify using lsusb
-        BAUD_RATE =  9600   # Must match Baud rate of ESP32
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout = 0.01)
+        ESP32_VID = 0x10C4 # Specific Vendor ID of ESP32 port will not matter
+        # Find the port matching that VID
+        ports = [p.device for p in serial.tools.list_ports.comports() if p.vid == ESP32_VID]
+        SERIAL_PORT = ports[0] if ports else None
+        if not SERIAL_PORT:
+            print("x ESP32 not found! Is it plugged in?")
+            exit()
+        # --- Initialization ---
+        ser = serial.Serial(SERIAL_PORT, 115200, timeout=0.01)
         time.sleep(2)
+        print(f"v Connected to ESP32 on {SERIAL_PORT}")
 
     def Load_API(self):  # Loads EMG API (change name of API file)
         # Now we're going to build a GUI
