@@ -1,8 +1,11 @@
 # handles all the math, rectify, max, and threshold
-
+import os
+import time
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from scipy import signal
+
 
 def analize_trial(emg_df, force_data, active_threshold=0):
     # Processes a single trial
@@ -92,12 +95,18 @@ def analize_trial(emg_df, force_data, active_threshold=0):
     # Threshold logic
     # is_success = True if max_emg < threshold
     is_success = max_emg < active_threshold if active_threshold > 0 else True
+
+    force_envelope = []
+
+    _debug_plot(emg_values, emg_envelope, emg_peaks,rectified_force, force_peaks)
    
     return {
         "max_emg": max_emg,
         "max_force": max_force,
         "is_success": is_success
     }
+
+    
 
 def calculate_start_threshold(baseline_maxes):
     # takes the list of 50 baseline maxes, finds averaege and returns 65% of that
@@ -123,3 +132,68 @@ def threshold_adjust(session_success_list, current_threshold):
         return new_threshold
     
     return current_threshold
+
+def _debug_plot(raw_emg, emg_envelope, emg_peaks, raw_force, force_peaks):
+    fs = 2148
+    emg_time = np.arange(len(raw_emg)) / fs
+    force_time = np.arange(len(raw_force)) / fs
+
+    # Using subplots() plural to return both figure and axes array
+    fig, axs = plt.subplots(2, 4, figsize=(18, 10)) 
+    fig.suptitle('Comprehensive Trial Analysis', fontsize=16, fontweight='bold')
+
+    # Column 0: Raw Rectified Data
+    axs[0, 0].plot(emg_time, raw_emg, color='blue')
+    axs[0, 0].set_title('Rectified EMG (raw)')
+    axs[0, 0].set_ylabel('mV')
+
+    axs[1, 0].plot(force_time, raw_force, color='red')
+    axs[1, 0].set_title('Rectified Force (raw)')
+    axs[1, 0].set_ylabel('V')
+
+    # Column 1: EMG Envelope (Bottom remains empty or for future use)
+    axs[0, 1].plot(emg_time, emg_envelope, color='darkblue')
+    axs[0, 1].set_title('EMG Envelope')
+    axs[1, 1].axis('off') # Hiding the unused subplot
+
+    # Column 2: Overlays
+    # Raw overlay (EMG and Force)
+    ax_emg_raw = axs[0, 2]
+    ax_force_raw = ax_emg_raw.twinx()
+    ax_emg_raw.plot(emg_time, raw_emg, color='blue', alpha=0.5, label='EMG')
+    ax_force_raw.plot(force_time, raw_force, color='red', alpha=0.5, label='Force')
+    ax_emg_raw.set_title('Raw Overlay')
+
+    # Envelope/Peak overlay
+    ax_emg_env = axs[1, 2]
+    ax_force_env = ax_emg_env.twinx()
+    ax_emg_env.plot(emg_time, emg_envelope, color='darkblue', alpha=0.7)
+    ax_force_env.plot(force_time, raw_force, color='red', alpha=0.3)
+    
+    if len(emg_peaks) > 0:
+        ax_emg_env.plot(emg_time[emg_peaks], emg_envelope[emg_peaks], 'bx', markersize=8)
+    
+    if len(force_peaks) > 0:
+        ax_force_env.plot(force_time[force_peaks], raw_force[force_peaks], 'rx', markersize=8)
+    
+    ax_emg_env.set_title('EMG Env & Force Peak Overlay')
+
+    # Column 3: Relationship (Phase Plot using Raw Force)
+    min_length = min(len(emg_envelope), len(raw_force))
+    if min_length > 0:
+        axs[0, 3].plot(raw_force[:min_length], emg_envelope[:min_length], color='purple', alpha=0.6)
+        axs[0, 3].set_xlabel('Raw Force (V)')
+        axs[0, 3].set_ylabel('EMG Env (mV)')
+        axs[0, 3].set_title('Phase Plot')
+    
+    axs[1, 3].axis('off')
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    
+    # Replace plt.show() with a save command
+    if not os.path.exists('debug_plots'):
+        os.makedirs('debug_plots')
+    
+    # Save with a timestamp or trial ID to avoid overwriting
+    plt.savefig(f"debug_plots/trial_{int(time.time())}.png")
+    plt.close(fig) # Critical: close the figure to free up memor

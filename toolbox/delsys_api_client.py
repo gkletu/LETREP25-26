@@ -25,7 +25,19 @@ def scan_sensors():
 def get_pipeline_status():
     status = server.get_pipeline_state()
     return status
-    
+
+def get_sensor_names(): # returns a string array with the sensor names
+    names = server.get_sensor_names()
+    return names
+
+def check_pair_status():
+    pair_status = server.check_pair_status()
+    return pair_status
+
+def ready_to_stream():
+    ready = server.ready_to_stream()
+    return ready
+
 def stop_collect():
     result = server.stop_collect()
 

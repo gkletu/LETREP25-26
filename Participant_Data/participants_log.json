@@ -10,6 +10,16 @@
             ],
             "created": "2026-02-26T13:26:00.967664",
             "entry_folder": "Participant_Data/Participant_85/entry1"
+        },
+        {
+            "entry_number": 2,
+            "sessions": [
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-25T19:01:42.623200",
+            "entry_folder": "Participant_Data/Participant_85/entry2"
         }
     ],
     "00": {
@@ -398,6 +408,16 @@
             ],
             "created": "2026-03-16T18:39:43.098776",
             "entry_folder": "Participant_Data/Participant_12/entry1"
+        },
+        {
+            "entry_number": 2,
+            "sessions": [
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-25T19:00:05.505213",
+            "entry_folder": "Participant_Data/Participant_12/entry2"
         }
     ],
     "64": [
@@ -571,6 +591,16 @@
             ],
             "created": "2026-03-23T22:56:15.953598",
             "entry_folder": "Participant_Data/Participant_64/entry17"
+        },
+        {
+            "entry_number": 18,
+            "sessions": [
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-24T14:18:31.665743",
+            "entry_folder": "Participant_Data/Participant_64/entry18"
         }
     ],
     "06": [
@@ -594,6 +624,58 @@
             ],
             "created": "2026-03-23T22:30:16.885442",
             "entry_folder": "Participant_Data/Participant_06/entry2"
+        },
+        {
+            "entry_number": 3,
+            "sessions": [
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-25T19:12:40.012135",
+            "entry_folder": "Participant_Data/Participant_06/entry3"
         }
-    ]
+    ],
+    "05": [
+        {
+            "entry_number": 1,
+            "sessions": [
+                "baseline",
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-25T19:06:41.082870",
+            "entry_folder": "Participant_Data/Participant_05/entry1"
+        }
+    ],
+    "90": [
+        {
+            "entry_number": 1,
+            "sessions": [
+                "baseline",
+                "session1",
+                "session2",
+                "session3"
+            ],
+            "created": "2026-03-25T19:15:13.813365",
+            "entry_folder": "Participant_Data/Participant_90/entry1"
+        }
+    ],
+    "09": {
+        "entries": [
+            {
+                "entry_number": 1,
+                "sessions": [
+                    "baseline",
+                    "session1",
+                    "session2",
+                    "session3"
+                ],
+                "created": "2026-03-25T19:16:45.564412",
+                "entry_folder": "Participant_Data/Participant_09/entry1"
+            }
+        ],
+        "active_threshold": 115.1866
+    }
 }
