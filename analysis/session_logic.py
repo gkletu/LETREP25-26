@@ -12,6 +12,7 @@ from toolbox import delsys_api_client as api
 from toolbox.participant_manager import ParticipantDataManager
 from itertools import zip_longest
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 
 class SessionManager:
@@ -64,22 +65,17 @@ class SessionManager:
         
         return True
 
-    def _force_collection_worker(self):
-        # Use the lock to check status safely
-        def check_status():
-            with self.lock:
-                return api.get_pipeline_status()
-
-        while check_status() == "Running":
-
-            sample = self._collect_force_sample()
-            if sample is not None:
-                self.raw_force.append(sample)
-
     def _trial_worker(self):
     
         print(f"##########################\n\nPair Status: {api.check_pair_status()}\n\n##########################")
         print(f"##########################\n\nReady to Steam: {api.ready_to_stream()}\n\n##########################")
+
+        # # If statement for when we get the API working propperly and tested propperly
+        # if(!api.check_pair_status())
+
+        # else
+        #     if(!api.ready_to_stream())
+
 
         """this works in parallel to the GUI via threading"""
         # collect data (where motor code and sensor code will live
@@ -103,25 +99,17 @@ class SessionManager:
 
         with self.lock:
             api.start_collect() # begins data collection for emg sensors
-        self.ser.write(b'S')    # begins data collection for force
-
-
-
-        #force_thread = threading.Thread(target = self._force_collection_worker)
-        #force_thread.start()
-        
+        self.ser.write(b'S')    # begins data collection for force        
 
         motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
-        time.sleep(.5)
-        with self.lock:
-            raw_emg = api.stop_collect()
+        time.sleep(2)                                    #changed from 0.5 to 2 just to see what happens
         self.ser.write(b'T') # stops force data collection
         self.raw_force = self._fetch_esp32_data()   # returns force data array from ESP32
-
-       # force_thread.join() # Kills the force sampling thread and returns the data
-
+        with self.lock:
+            raw_emg = api.stop_collect()
+        
         # This calls the bridge function below
-        time.sleep(.5)                                   #wait for 1 seconds 
+        time.sleep(.5)                                   #wait for 1 seconds (temporarily waits for 2.5 seconds)
         # motor.shutdown_node()
 
         # ANALYSIS & SAVING
@@ -192,20 +180,6 @@ class SessionManager:
 
         print(f"v Received {len(data)} force samples.")
         return data
-
-    def _collect_force_sample(self):
-        try:
-            line_raw = self.ser.readline().decode('utf-8').strip()
-            if not line_raw:
-                return None
-            
-            # Split in case of multiple data points in one buffer read
-            if '\r' in line_raw:
-                line_raw = line_raw.split('\r')[0]
-                
-            return float(line_raw)
-        except (ValueError, Exception):
-            return None # Gracefully skip bad data
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """

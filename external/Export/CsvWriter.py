@@ -1,6 +1,5 @@
 import csv
 
-
 class CsvWriter:
     filename = "data.csv"
 
@@ -9,8 +8,8 @@ class CsvWriter:
         self.h2_channels = []
         self.data = [[]]
 
-    def appendSensorHeader(self, sensor):
-        self.h1_sensors.append("(" + str(sensor.PairNumber) + ")" + sensor.FriendlyName)
+    def appendSensorHeader(self, pair_number, sensor_name):
+        self.h1_sensors.append(f"({pair_number}) {sensor_name}")
 
     def appendSensorHeaderSeperator(self):
         self.h1_sensors.append("")
@@ -19,12 +18,12 @@ class CsvWriter:
         self.h1_sensors.append("")
         self.h1_sensors.append("")
 
-    def appendChannelHeader(self, channel):
-        self.h2_channels.append(channel.Name + " (" + str(round(channel.SampleRate, 3)) + ")")
+    def appendChannelHeader(self, channel_name, channel_sample_rate):
+        self.h2_channels.append(f"{channel_name} ({str(round(channel_sample_rate, 3))})")
 
-    def appendYTChannelHeader(self, channel):
-        self.h2_channels.append(channel.Name + " Time Series")
-        self.h2_channels.append(channel.Name + " (" + str(round(channel.SampleRate, 3)) + ")")
+    def appendYTChannelHeader(self, channel_name, channel_sample_rate):
+        self.h2_channels.append(f"{channel_name} Time Series")
+        self.h2_channels.append(f"{channel_name} ({str(round(channel_sample_rate, 3))})")
 
     def exportCSV(self):
         try:
@@ -99,11 +98,9 @@ class CsvWriter:
         except PermissionError:
             print("ERROR: CSV Export failed because the file is being used by another program")
             return False
-
-        except Exception:
-            print("CSV Export Failed")
+        except Exception as e:
+            print("CSV Export Failed: ", e)
             return False
-
         return True
 
     def clearall(self):

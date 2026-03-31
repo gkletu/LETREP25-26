@@ -26,7 +26,7 @@ def analize_trial(emg_df, force_data, active_threshold=0):
     rectified_emg = np.abs(emg_values)
     emg_envelope = signal.savgol_filter(rectified_emg, window_length=int(0.2*emg_fs)|1, polyorder=3)
 
-    print(f"Preprocessed EMG data:\n\tRectified EMG:\n\n{rectified_emg}\n\tEnvelope:\n\n{emg_envelope}\n\n")    # debug
+    # print(f"Preprocessed EMG data:\n\tRectified EMG:\n\n{rectified_emg}\n\tEnvelope:\n\n{emg_envelope}\n\n")    # debug
 
     # Restrict to Reflex Window (t0 is the time at which the stretch reflex is induced)
     # Adjust t0 as needed to account for motor delay. Reflex is typically 15-50 ms after stretch
@@ -34,7 +34,7 @@ def analize_trial(emg_df, force_data, active_threshold=0):
     emg_end = int(0 + 0.050 * emg_fs)
     emg_segment = emg_envelope[emg_start:emg_end] # isolate the time window with only the reflex
 
-    print(f"\n\n\tSegment:\n\n{emg_segment}")
+    # print(f"\n\n\tSegment:\n\n{emg_segment}")
 
     # EMG Peak Detection
     # .find_peaks returns (indices, properties). We just want the indices [0]
@@ -45,14 +45,14 @@ def analize_trial(emg_df, force_data, active_threshold=0):
         width = int(0.005 * emg_fs), 
     )[0] # <--- Added [0] here to get only the array of indices
 
-    print(f"\t\nPeak Indices:\n\n{emg_peaks}\n\n") # debug
+    # print(f"\t\nPeak Indices:\n\n{emg_peaks}\n\n") # debug
     
     # EMG Max
     # Extract the values at those indices, then find the max
     # We use a 'if' check to avoid a crash if no peaks are found
     max_emg = np.max(emg_envelope[emg_peaks]) if len(emg_peaks) > 0 else 0
 
-    print(f"\n\tMaxes:\n\n{max_emg}")
+    # print(f"\n\tMaxes:\n\n{max_emg}")
 
     # Converting force from a list to an np array
     print(f"Raw Force:{force_data}\n\n\n\n")
@@ -196,4 +196,4 @@ def _debug_plot(raw_emg, emg_envelope, emg_peaks, raw_force, force_peaks):
     
     # Save with a timestamp or trial ID to avoid overwriting
     plt.savefig(f"debug_plots/trial_{int(time.time())}.png")
-    plt.close(fig) # Critical: close the figure to free up memor
+    plt.close(fig) # Critical: close the figure to free up memory

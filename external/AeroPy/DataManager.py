@@ -61,23 +61,22 @@ class DataKernel():
 
     def GetData(self):
         """ Check if data ready from DelsysAPI via Aero CheckDataQueue() - Return True if data is ready
-            Get data (PollData)
+            Get data (PollDataByString)
             Organize output channels by their GUID keys
 
             Return array of all channel data
         """
-
-        dataReady = self.TrigBase.CheckDataQueue()                      # Check if DelsysAPI real-time data queue is ready to retrieve
-        if dataReady:
+        if self.TrigBase.CheckDataQueue():# Is the DelsysAPI real-time data queue ready to retrieve
             try:
-                DataOut = self.TrigBase.PollData()                          # Dictionary<Guid, List<double>> (key = Guid (Unique channel ID), value = List(Y) (Y = sample value)
+                # Dictionary<string, List<double>> (key = Guid (Unique channel ID), value = List(Y) (Y = sample value)
+                DataOut = self.TrigBase.PollDataByString()
                 if len(list(DataOut.Keys)) > 0:
-                    outArr = [[] for i in range(len(self.trigno_base.channel_guids))]             # Set output array size to the amount of channels set during ConfigureCollectionOutput() in TrignoBase.py
-
-                    for j in range(len(self.trigno_base.channel_guids)):            #Loop all channels set during configuration (default behavior is all channels unless updated)
-                        chan_data = DataOut[self.trigno_base.channel_guids[j]]      # Index a single channels data from the dictionary based on unique channel GUID (key)
-                        outArr[j].append(np.asarray(chan_data, dtype='object'))     # Create a NumPy array of the channel data and add to the output array
-
+                    # Set output array size to the amount of channels set during ConfigureCollectionOutput() in TrignoBase.py
+                    outArr = [[] for _ in range(len(self.trigno_base.channel_guids))]
+                    # Loop all channels set during configuration (default behavior is all channels unless updated)
+                    for channel_index in range(len(self.trigno_base.channel_guids)):
+                        channel_guid = self.trigno_base.channel_guids[channel_index]
+                        outArr[channel_index].append(np.asarray(DataOut[channel_guid], dtype='object'))     # Create a NumPy array of the channel data and add to the output array
                     return outArr
             except Exception as e:
                 print("Exception occured in GetData() - " + str(e))
@@ -87,26 +86,24 @@ class DataKernel():
     def GetYTData(self):
         """ YT Data stream only available when passing 'True' to Aero Start() command i.e. TrigBase.Start(True)
             Check if data ready from DelsysAPI via Aero CheckYTDataQueue() - Return True if data is ready
-            Get data (PollYTData)
+            Get data (PollYTDataByString)
             Organize output channels by their GUID keys
 
             Return array of all channel data
         """
-
-        dataReady = self.TrigBase.CheckYTDataQueue()                        # Check if DelsysAPI real-time data queue is ready to retrieve
-        if dataReady:
+        if self.TrigBase.CheckYTDataQueue(): #Is the DelsysAPI real-time data queue ready to retrieve?
             try:
-                DataOut = self.TrigBase.PollYTData()                            # Dictionary<Guid, List<(double, double)>> (key = Guid (Unique channel ID), value = List<(T, Y)> (T = time stamp in seconds Y = sample value)
+                # Dictionary<string, List<(double, double)>> (key = Guid as string (Unique channel ID), value = List<(T, Y)> (T = time stamp in seconds Y = sample value)
+                DataOut = self.TrigBase.PollYTDataByString()
                 if len(list(DataOut.Keys)) > 0:
-                    outArr = [[] for i in range(len(self.trigno_base.channel_guids))]  # Set output array size to the amount of channels set during ConfigureCollectionOutput() in TrignoBase.py
-
-                    for j in range(len(self.trigno_base.channel_guids)):            #Loop all channels set during configuration (default behavior is all channels unless updated)
-                        chan_yt_data = DataOut[self.trigno_base.channel_guids[j]]    # Index a single channels data from the dictionary based on unique channel GUID (key)
-                        outArr[j].append(np.asarray(chan_yt_data, dtype='object'))  # Create a NumPy array of the channel data and add to the output array
-
+                    # Set output array size to the amount of channels set during ConfigureCollectionOutput() in TrignoBase.py
+                    outArr = [[] for _ in range(len(self.trigno_base.channel_guids))]
+                    # Loop all channels set during configuration (default behavior is all channels unless updated)
+                    for channel_index in range(len(self.trigno_base.channel_guids)):
+                        channel_guid = self.trigno_base.channel_guids[channel_index]
+                        outArr[channel_index].append(np.asarray(DataOut[channel_guid], dtype='object'))
                     return outArr
-
             except Exception as e:
-                print("Exception occured in GetYTData() - " + str(e))
+                print("Exception occurred in GetYTData() - " + str(e))
         else:
             return None

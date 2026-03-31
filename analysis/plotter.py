@@ -79,44 +79,45 @@ class LivePlotter:
         # redraw only the canvas
         self.fig.canvas.draw_idle()
 
-    def session_summary(all_emg_max, all_force_max, final_threshod):
-        #creates a popup at the end of the session comparing force and EMG for all trials preformed
-        # Create plot
-        plt.figure(figsize=(8,6))
+def session_summary(all_emg_max, all_force_max, final_threshold):
+    #creates a popup at the end of the session comparing force and EMG for all trials preformed
+    # Create plot
+    plt.figure(figsize=(8,6))
 
-        # Convert to numpy arrays
-        emg = np.array(all_emg_max)
-        force = np.array(all_force_max)
-        trials = np.arange(1, len(emg)+1)
+    # Convert to numpy arrays
+    emg = np.array(all_emg_max)
+    force = np.array(all_force_max)
+    trials = np.arange(1, len(emg)+1)
 
-        # Separate success and fail for coloring
-        success_mask = emg , final_threshold
+    # Separate success and fail for coloring
+    success_mask = emg < final_threshold
 
-        # 1. Plot the "Success" trials (Green)
-        plt.scatter(force[success_mask], emg[success_mask], 
-                color='#4caf50', s=60, label='Successful Trials', edgecolors='black', alpha=0.8)
+    # 1. Plot the "Success" trials (Green)
+    plt.scatter(force[success_mask], emg[success_mask], 
+            color='#4caf50', s=60, label='Successful Trials', edgecolors='black', alpha=0.8)
+
+    # 2. Plot the "Failed" trials (Red)
+    plt.scatter(force[~success_mask], emg[~success_mask], 
+            color='#f44336', s=60, label='Above Threshold', edgecolors='black', alpha=0.8)
+
+    # 3. Add the Threshold Line
+    plt.axhline(y=final_threshold, color='#f44336', linestyle='--', linewidth=2, label='Final Threshold')
+
+    # 4. Success Zone Shading
+    plt.fill_between([min(force)*0.9, max(force)*1.1], 0, final_threshold, 
+                    color='#4caf50', alpha=0.1)
     
-        # 2. Plot the "Failed" trials (Red)
-        plt.scatter(force[~success_mask], emg[~success_mask], 
-                color='#f44336', s=60, label='Above Threshold', edgecolors='black', alpha=0.8)
+    # Labeling
+    plt.title(f"Session Summary ({len(emg)} Trials)", fontsize=14)
+    plt.xlabel("Maximum Force Peak (V)", fontsize=12)
+    plt.ylabel("Maximum EMG (mV)", fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle=":", alpha=0.6)
 
-        # 3. Add the Threshold Line
-        plt.axhline(y=final_threshold, color='#f44336', linestyle='--', linewidth=2, label='Final Threshold')
+    # add trial numbers next to the points
+    for i, txt in enumerate(trials):
+        plt.annotate (txt, (force[i], emg[i]),textcoords="offset points", xytext=(0,5), ha='center', fontsize=8)
     
-        # 4. Success Zone Shading
-        plt.fill_between([min(force)*0.9, max(force)*1.1], 0, final_threshold, 
-                     color='#4caf50', alpha=0.1)
-        
-        # Labeling
-        plt.title(f"Sessioon Summary ({len(emg)} Trials)", fontsize=14)
-        plt.xlabel("Maximum Force Peak (V)", fontsize=12)
-        plt.ylabel("Maximum EMG (mV)", fontsize=12)
-        plt.legend()
-        plt.grid(True, linestyle=":", alpha=0.6)
-
-        # add trial numbers next to the points
-        for i, txt in enumerate(trials):
-            plt.annotate (txt, (force[i], emg[i]),textcoords="offset points", xytext=(0,5), ha='center', fontsize=8)
-        
-        plt.tight_layout()
-        plt.show()
+    # Save with a timestamp to avoid overwriting
+    plt.savefig(f"debug_plots/session_{int(time.time())}.png")
+    plt.close(fig) # Critical: close the figure to free up memory
