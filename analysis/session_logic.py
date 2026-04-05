@@ -7,6 +7,7 @@ import os
 import threading
 import ctypes
 import pandas as pd
+import struct
 from analysis import processors
 from toolbox import delsys_api_client as api
 from toolbox.participant_manager import ParticipantDataManager
@@ -98,13 +99,24 @@ class SessionManager:
         motor.acceleration_velocity_set(4000, 2000)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
 
         with self.lock:
-            api.start_collect() # begins data collection for emg sensors
-        self.ser.write(b'S')    # begins data collection for force        
+            api.start_collect()  # begins data collection for EMG sensors
 
-        motor.move_counts(-1500, 1)                      #move to 500 counts offset from home
-        time.sleep(2)                                    #changed from 0.5 to 2 just to see what happens
-        self.ser.write(b'T') # stops force data collection
-        self.raw_force = self._fetch_esp32_data()   # returns force data array from ESP32
+        # Begin force collection with ACK check
+        if not self.send_command_with_ack(b'S'):
+            print("x ESP32 did not ACK start command.")
+            return
+
+        motor.move_counts(-1500, 1)  # move to 500 counts offset from home
+        time.sleep(2)                 # allow motion to complete
+
+        # Stop force collection with ACK check
+        if not self.send_command_with_ack(b'T'):
+            print("x ESP32 did not ACK stop command.")
+            return
+
+        # Fetch the binary force data as DataFrame
+        self.raw_force = self._fetch_esp32_force()
+
         with self.lock:
             raw_emg = api.stop_collect()
         
@@ -144,42 +156,78 @@ class SessionManager:
         if new_t != self.active_threshold:
             self.dm.update_threshold(self.p_id, new_t)
 
-    def _fetch_esp32_data(self):
+    def _fetch_esp32_force(self):
+        """
+        Fetch force and timestamp data from ESP32 over serial and return as a pandas DataFrame.
+        Assumes ESP32 sends binary:
+        - 4 bytes: uint32 sample count
+        - 4 bytes: float force
+        - 4 bytes: uint32 timestamp (microseconds)
+        """
         if not self.ser:
-            return [0.0] * 100
+            return pd.DataFrame(columns=['timestamp_us', 'force_V'])
 
-        # 1. Clear any 'STARTED' or 'STOPPED' messages left over
+        # 1. Clear any leftover data
         self.ser.reset_input_buffer()
         
         # 2. Trigger the dump
         self.ser.write(b'D')
-        
-        data = []
-        # 3. Wait for the FIRST byte to arrive (up to 2 seconds)
+
+        # 3. Wait for ACK byte from ESP32
         start_wait = time.time()
         while self.ser.in_waiting == 0:
             if (time.time() - start_wait) > 2.0:
-                print("x ESP32 never started sending data.")
-                return [0.0] * 100
+                print("x ESP32 never acknowledged dump command.")
+                return pd.DataFrame(columns=['timestamp_us', 'force_V'])
             time.sleep(0.01)
 
-        # 4. Now read until "END"
-        while True:
-            if self.ser.in_waiting > 0:
-                line = self.ser.readline().decode('utf-8', errors='ignore').strip()
-                if "END" in line:
-                    break
-                try:
-                    data.append(float(line))
-                except ValueError:
-                    continue
-            
-            # Safety break if the stream just dies
-            if (time.time() - start_wait) > 5.0: 
-                break
+        ack = self.ser.read(1)
+        if ack != b'A':
+            print("x Unexpected ACK:", ack)
+            return pd.DataFrame(columns=['timestamp_us', 'force_V'])
 
-        print(f"v Received {len(data)} force samples.")
-        return data
+        # 4. Wait for 4 bytes (sample count)
+        while self.ser.in_waiting < 4:
+            if (time.time() - start_wait) > 2.0:
+                print("x ESP32 never sent sample count.")
+                return pd.DataFrame(columns=['timestamp_us', 'force_V'])
+            time.sleep(0.01)
+
+        count_bytes = self.ser.read(4)
+        sample_count = struct.unpack('<I', count_bytes)[0]
+        print(f"v ESP32 reporting {sample_count} samples.")
+
+        # 5. Read all samples (8 bytes each: 4 float + 4 uint32)
+        bytes_needed = sample_count * 8
+        data_bytes = b''
+        start_wait = time.time()
+        while len(data_bytes) < bytes_needed:
+            if self.ser.in_waiting > 0:
+                data_bytes += self.ser.read(self.ser.in_waiting)
+            if (time.time() - start_wait) > 5.0:
+                print(f"x Timeout: only received {len(data_bytes)//8} of {sample_count} samples.")
+                break
+            time.sleep(0.001)
+
+        # 6. Unpack data
+        forces = []
+        timestamps = []
+        for i in range(0, len(data_bytes), 8):
+            f_bytes = data_bytes[i:i+4]
+            t_bytes = data_bytes[i+4:i+8]
+            if len(f_bytes) < 4 or len(t_bytes) < 4:
+                break
+            forces.append(struct.unpack('<f', f_bytes)[0])
+            timestamps.append(struct.unpack('<I', t_bytes)[0])
+
+        # 7. Create pandas DataFrame
+        df = pd.DataFrame({
+            'timestamp_us': timestamps,
+            'force_V': forces
+        })
+
+        print(f"v Received {len(df)} force samples successfully.")
+        return df
     
     def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
         """
@@ -196,3 +244,26 @@ class SessionManager:
 
         if os.path.exists(temp_name):
             os.remove(temp_name)
+
+    def send_command_with_ack(self, cmd: bytes, timeout=2.0) -> bool:
+        """Send a single-byte command and wait for 'A' ACK from ESP32"""
+        if not self.ser:
+            return False
+
+        # Clear any leftover bytes BEFORE sending
+        self.ser.reset_input_buffer()
+        
+        # Send command
+        self.ser.write(cmd)
+        self.ser.flush()  # ensure it actually leaves the OS buffer
+
+        # Set read timeout
+        self.ser.timeout = timeout
+
+        # Wait for ACK
+        ack = self.ser.read(1)
+        if ack != b'A':
+            print(f"x No ACK for command {cmd}: received {ack}")
+            return False
+
+        return True
