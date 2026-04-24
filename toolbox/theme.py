@@ -16,6 +16,8 @@ COLORS = {
     'purple_active':'#675F76',
     'blue_btn': '#6A7E92',
     'blue_active':'#556877',
+    'indigo_btn':'#737A90',
+    'indigo_active':'#5F6578'
 }
 
 FONTS = {

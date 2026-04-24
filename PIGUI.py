@@ -213,7 +213,7 @@ class ParticipantApp:
             button_frame,
             text="Start Session",
             font=FONTS['button'],
-            bg=COLORS['success_active'],
+            bg=COLORS['success'],
             fg=COLORS['text_primary'],
             activebackground=COLORS['success_active'],
             activeforeground=COLORS['text_primary'],
@@ -229,7 +229,7 @@ class ParticipantApp:
             button_frame,
             text="Change Session",
             font=FONTS['button'],
-            bg=COLORS['blue_active'],
+            bg=COLORS['blue_btn'],
             fg=COLORS['text_primary'],
             activebackground=COLORS['blue_active'],
             activeforeground=COLORS['text_primary'],
@@ -239,8 +239,22 @@ class ParticipantApp:
             relief=tk.SUNKEN
         )
         self.save_btn.grid(row=0, column=1, padx=10, pady=10)
+        
+        # Change entry entry button (always active)
+        self.api_btn = tk.Button(
+            button_frame,
+            text="Reconnect EMG",
+            font=FONTS['button'],
+            bg=COLORS['indigo_btn'],
+            fg=COLORS['text_primary'],
+            activebackground=COLORS['indigo_active'],
+            activeforeground=COLORS['text_primary'],
+            command=self.Load_API,  # incriments the entry index
+            width=15, height=2,
+        )
+        self.api_btn.grid(row=0, column=2, padx=10, pady=10)
 
-        # Change Participant button (always active)
+        # Change Participant button (always active, unless trial in session)
         self.change_participant_btn = tk.Button(
             button_frame,
             text="Change Participant",
@@ -252,7 +266,7 @@ class ParticipantApp:
             command=self.show_login_popup,
             width=18, height=2
         )
-        self.change_participant_btn.grid(row=0, column=2, padx=10, pady=10)
+        self.change_participant_btn.grid(row=0, column=3, padx=10, pady=10)
 
         # Exit button (always active)
         self.exit_btn = tk.Button(
@@ -266,7 +280,7 @@ class ParticipantApp:
             command=self.close_window,
             width=15, height=2
         )
-        self.exit_btn.grid(row=0, column=3, padx=10, pady=10)
+        self.exit_btn.grid(row=0, column=4, padx=10, pady=10)
 
     def _create_plot_frame(self):
         """Create frame for plot and a side-panel for live trial stats."""
@@ -570,8 +584,21 @@ class ParticipantApp:
             self.current_trial_count += 1
             
             # Start the threaded trial
-            self.sm.run_single_trial()
-            
+            #self.sm.run_single_trial()
+            if not api.ready_to_stream(): # Ensures that the API is ready to stream
+                delay_start = time.time()
+                while not api.ready_to_stream() and time.time() - delay_start < 2.0:
+                    time.sleep(0.005)
+                    # Check if it actually became ready
+                    if not api.ready_to_stream():
+                        print("x API failed to become ready within 2 seconds")
+                        self.Load_API # should pop up the EMG connection popup
+                        return 
+                else:
+                    print("v API is ready")
+            else:
+                self.sm.run_single_trial()
+                
             # Re-check in a bit
             self.root.after(100, self.run_trial_cycle)
         else:

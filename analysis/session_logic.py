@@ -12,6 +12,7 @@ from analysis import processors
 from toolbox import delsys_api_client as api
 from toolbox.participant_manager import ParticipantDataManager
 from itertools import zip_longest
+#from analysis.processors import emg_envelope, force_envelope, force_timestamps, emg_timestamps
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
@@ -70,14 +71,7 @@ class SessionManager:
     
         print(f"##########################\n\nPair Status: {api.check_pair_status()}\n\n##########################")
         print(f"##########################\n\nReady to Steam: {api.ready_to_stream()}\n\n##########################")
-
-        # # If statement for when we get the API working propperly and tested propperly
-        # if(!api.check_pair_status())
-
-        # else
-        #     if(!api.ready_to_stream())
-
-
+      
         """this works in parallel to the GUI via threading"""
         # collect data (where motor code and sensor code will live
         motor = ctypes.CDLL("/home/letrep/Downloads/Linux_Software/sFoundation/libMotor_working3.so")
@@ -88,12 +82,12 @@ class SessionManager:
         # motor.setup_and_home(30000)                     #allow motor to find home position
         motor.acceleration_velocity_set(1000,100)		#set a and v limits to 1000rpm/s and 500 rpm (medium movement)
         motor.move_counts(-8000,1)                      #move to 45 degrees
-        time.sleep(1)                                   #wait for 2 seconds
+        time.sleep(1)                                   #wait for 1 seconds
 
         # PRE-TRIAL (e.g., Preloading Motors) may be included in base ctypes
         motor.acceleration_velocity_set(500, 30)        #set acceleration and velocity limits to 500rpm/s and 30rpm (slow movement)
         motor.move_speed(30)                            #move at 30 rpm                            
-        time.sleep(.75)                                   #move for 1 second (check if it acts as a delay or pause)
+        time.sleep(.75)                                   #move for 3/4 second (check if it acts as a delay or pause)
         
         # Reflex induction and EMG Data Collection
         motor.acceleration_velocity_set(4000, 2000)      #set acceleration and velocity limits to 2000rpm/s and 500 rpm (quick movement)
@@ -105,9 +99,10 @@ class SessionManager:
         if not self.send_command_with_ack(b'S'):
             print("x ESP32 did not ACK start command.")
             return
-
-        motor.move_counts(-1500, 1)  # move to 500 counts offset from home
-        time.sleep(2)                 # allow motion to complete
+            
+        time.sleep(0.5) # Force Sensor and EMG Sensor Collect for 300 ms prior to collection being enabled
+        motor.move_counts(-500, 1)  # move to 500 counts offset from home
+        time.sleep(1)                 # allow motion to complete
 
         # Stop force collection with ACK check
         if not self.send_command_with_ack(b'T'):
@@ -129,9 +124,9 @@ class SessionManager:
         self.session_maxes.append(results["max_emg"])
         self.success_history.append(results["is_success"])
         
-        self._temp_save_and_move(
+        self._temp_save_and_move(   #this needs to be passed the processed data from processors
             self.p_id, self.entry_idx, self.sess_type, 
-            self.current_trial_num, raw_emg, self.raw_force
+            self.current_trial_num, raw_emg, self.raw_force, results
         )
         
         # UI UPDATE
@@ -141,20 +136,20 @@ class SessionManager:
 
         if self.current_trial_num >= self.total_trials_needed:
             self._handle_end_of_session_math()
-    
-    def _handle_end_of_session_math(self):
-        """
-        Calculates and saves new thresholds based on performance.
-        """
-        if self.sess_type == "baseline":
-            new_t = processors.calculate_start_threshold(self.session_maxes)
+        
+        def _handle_end_of_session_math(self):
+            """
+            Calculates and saves new thresholds based on performance.
+            """
+            if self.sess_type == "baseline":
+                new_t = processors.calculate_start_threshold(self.session_maxes)
 
-        else:
-            # mastery check: if 75% success, reduce threshold by 35%
-            new_t = processors.threshold_adjust(self.success_history, self.active_threshold)
+            else:
+                # mastery check: if 75% success, reduce threshold by 35%
+                new_t = processors.threshold_adjust(self.success_history, self.active_threshold)
 
-        if new_t != self.active_threshold:
-            self.dm.update_threshold(self.p_id, new_t)
+            if new_t != self.active_threshold:
+                self.dm.update_threshold(self.p_id, new_t)
 
     def _fetch_esp32_force(self):
         """
@@ -229,18 +224,41 @@ class SessionManager:
         print(f"v Received {len(df)} force samples successfully.")
         return df
     
-    def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force):
-        """
-        Creates temp file so the participant manager can move it to its final home.
-        """
+    def _temp_save_and_move(self, p_id, entry_idx, sess_type, trial_num, emg, force, results):
         temp_name = f"temp_trial_{trial_num}.csv"
+
+        # Convert everything to lists to strip numpy type wrappers
+        def ensure_list(data):
+            if hasattr(data, "tolist"): return data.tolist()
+            return list(data) if data is not None else []
+
+        f_emg = ensure_list(results.get("emg_filtered"))
+        t_emg = ensure_list(results.get("emg_timestamps"))
+        f_force = ensure_list(results.get("force_filtered"))
+        t_force = ensure_list(results.get("force_timestamps"))
+        raw_force_v = ensure_list(force['force_V']) if not force.empty else []
+        # Ensure raw emg (passed as 'emg') is also handled
+        raw_emg = emg["value"].to_numpy(dtype = float)
+        raw_emg = ensure_list(emg)
+
         with open(temp_name, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["EMG", "Force"])
-            writer.writerows(zip_longest(emg, force, fillvalue=0))
 
-        # Call existing "save_csv_to_session" from participant_manager.py
-        self.dm.save_csv_to_session(p_id, entry_idx, sess_type, temp_name) # fix .dm to .pm
+            # Write Metadata
+            writer.writerow(["Trial: ", trial_num])
+            writer.writerow(["Threshold: ", float(self.active_threshold)])
+            writer.writerow(["Maximum EMG: ", float(results.get("max_emg", 0))])   
+            writer.writerow(["Success: ", bool(results.get("is_success"))])                   
+            writer.writerow([]) 
+            
+            # Write Headers
+            writer.writerow(["EMG Time","Raw EMG","Filtered EMG","Force Time","Raw Force (V)","Filtered Force (N)"]) 
+            
+            # Zip and Write Rows
+            rows = zip_longest(t_emg, raw_emg, f_emg, t_force, raw_force_v, f_force, fillvalue="")
+            writer.writerows(rows) # Use writerows for the zipped iterator
+
+        self.dm.save_csv_to_session(p_id, entry_idx, sess_type, temp_name)
 
         if os.path.exists(temp_name):
             os.remove(temp_name)
