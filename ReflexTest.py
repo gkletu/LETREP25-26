@@ -162,7 +162,7 @@ class ReflexApp:
 
             # Lowpass filter
             force_nyq = 2148/2
-            force_lpc = 120 #Hz
+            force_lpc = 150 #Hz
             force_nco = force_lpc / force_nyq
             force_lp_b, force_lp_a = signal.butter(4, force_nco, btype='low', analog=False)
             lp_filtered_force = signal.filtfilt(force_lp_b, force_lp_a, force_val)
