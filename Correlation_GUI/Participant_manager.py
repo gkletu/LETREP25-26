@@ -1,7 +1,5 @@
-# ============================================================
-# PARTICIPANT DATA MANAGER MODULE
-# File: participant_manager.py
-# ============================================================
+# Participant_manager.py
+
 # This module handles all participant data management:
 # - File/folder structure creation
 # - JSON data persistence
@@ -179,199 +177,89 @@ class ParticipantDataManager:
     def create_new_entry(self, participant_id):
         """
         Create a new entry for a participant.
-        Creates complete folder structure and initializes session folders.
-
-        First entry includes: baseline + session1 + session2 + session3
-        Subsequent entries include: session1 + session2 + session3 (no baseline)
-
-        Parameters:
-            participant_id (str): Validated participant ID (e.g., "01", "42")
-
-        Returns:
-            tuple: (entry_folder_path, sessions_list)
-                   entry_folder_path (str): Full path to created entry folder
-                   sessions_list (list): List of session names for this entry
-                   Returns (None, []) if creation fails
+        Creates a flat folder: Participant_Data/Participant_XX/entryN/
         """
-        # -------------------- Create Participant Folder --------------------
+        # 1. Create/Verify Participant Folder
         participant_folder = os.path.join(self.base_dir, f"Participant_{participant_id}")
-
         try:
             os.makedirs(participant_folder, exist_ok=True)
         except OSError as e:
             messagebox.showerror("Error", f"Failed to create participant folder: {e}")
             return None, []
 
-        # -------------------- Determine Entry Number --------------------
-        existing_entries = self.participants_data.get(participant_id, [])
+        # 2. Determine Entry Number
+        existing_entries = self.get_participant_entries(participant_id)
         entry_count = len(existing_entries) + 1
         entry_name = f"entry{entry_count}"
         entry_folder = os.path.join(participant_folder, entry_name)
 
-        # -------------------- Create Entry Folder --------------------
+        # 3. Create Entry Folder (This is now the final data folder)
         try:
             os.makedirs(entry_folder, exist_ok=True)
         except OSError as e:
             messagebox.showerror("Error", f"Failed to create entry folder: {e}")
             return None, []
 
-        # -------------------- Determine Sessions --------------------
-        # First entry gets baseline, subsequent entries don't
-        sessions = ["session1", "session2", "session3"]
-        if entry_count == 1:
-            sessions = ["baseline"] + sessions
-
-        # -------------------- Create Session Folders --------------------
-        for session in sessions:
-            session_folder = os.path.join(entry_folder, session)
-            try:
-                os.makedirs(session_folder, exist_ok=True)
-            except OSError as e:
-                messagebox.showerror("Error", f"Failed to create session folder '{session}': {e}")
-                return None, []
-
-        # -------------------- Update Tracking Data --------------------
+        # 4. Update Tracking Data (Removed sessions list)
         entry_info = {
             "entry_number": entry_count,
-            "sessions": sessions,
-            "created": datetime.now().isoformat(),  # ISO format: YYYY-MM-DDTHH:MM:SS
-            "entry_folder": entry_folder
+            "created": datetime.now().isoformat(),
+            "entry_folder": entry_folder,
+            "status": "active"
         }
 
         # Add to participants data
-        # setdefault creates empty list if participant doesn't exist
-        self.participants_data.setdefault(participant_id, []).append(entry_info)
-
-        # Save updated data to file
+        if participant_id not in self.participants_data:
+            self.participants_data[participant_id] = {"entries": [], "active_threshold": 0.0}
+        
+        # Handle if data is currently a list or a dict (compatibility check)
+        if isinstance(self.participants_data[participant_id], list):
+             self.participants_data[participant_id] = {
+                 "entries": self.participants_data[participant_id],
+                 "active_threshold": 0.0
+             }
+        
+        self.participants_data[participant_id]["entries"].append(entry_info)
         self.save_data()
 
-        # Log creation
-        print(f"  Created entry {entry_count} for participant {participant_id}")
-        print(f"  Folder: {entry_folder}")
-        print(f"  Sessions: {', '.join(sessions)}")
-
-        return entry_folder, sessions
-
+        print(f"Created {entry_name} for participant {participant_id}")
+        # We return an empty list for sessions since they no longer exist
+        return entry_folder, []
     # ============================================================
     # FILE SAVING METHODS
     # ============================================================
 
     def save_csv_to_session(self, participant_id, entry_index, session_name, source_csv_path, fig, axs):
         """
-        Copy CSV file to the appropriate session folder with timestamp.
-        Creates timestamped filename to prevent overwrites.
-
-        Parameters:
-            participant_id (str): Participant ID (e.g., "01")
-            entry_index (int): Index of entry (0 = first entry, 1 = second, etc.)
-            session_name (str): Session name (e.g., "baseline", "session1")
-            source_csv_path (str): Full path to source CSV file to copy
-
-        Returns:
-            tuple: (bool, str) - (success, result_message)
-                   If successful: (True, "path/to/saved/file.csv")
-                   If failed: (False, "error message")
-
-        Example:
-            Source file: /home/user/data.csv
-            Destination: Participant_Data/Participant_01/entry1/baseline/baseline_data_20241114_153045.csv
+        Saves CSV and Plot directly to the entry folder.
+        'session_name' is ignored but kept in signature to avoid breaking main.py
         """
         try:
-            # -------------------- Validate Inputs --------------------
-            if participant_id not in self.participants_data:
-                return False, f"Participant {participant_id} not found in database"
-
-            entries = self.participants_data[participant_id]
+            entries = self.get_participant_entries(participant_id)
             if entry_index >= len(entries):
-                return False, f"Entry index {entry_index} out of range (only {len(entries)} entries exist)"
+                return False, "Entry index out of range"
 
             entry_info = entries[entry_index]
-            entry_folder = entry_info["entry_folder"]
+            dest_folder = entry_info["entry_folder"] # Points to .../entryN/
 
-            # -------------------- Create Destination Path --------------------
-            session_folder = os.path.join(entry_folder, session_name)
-
-            # Create session folder if it doesn't exist (safety check)
-            os.makedirs(session_folder, exist_ok=True)
-
-            # Create timestamped filename to prevent overwrites
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # Format: YYYYMMDD_HHMMSS
+            # Create timestamp for unique naming
+            timestamp = datetime.now().strftime("%H%M%S")
             original_filename = os.path.basename(source_csv_path)
-            name, ext = os.path.splitext(original_filename)
-            dest_filename = f"{session_name}_data_{timestamp}{ext}"
-            dest_path = os.path.join(session_folder, dest_filename)
+            
+            # Destination Path for CSV
+            dest_csv_path = os.path.join(dest_folder, f"trial_{timestamp}_{original_filename}")
 
-            # -------------------- Copy File --------------------
-            # shutil.copy2 preserves file metadata (creation date, etc.)
-            shutil.copy2(source_csv_path, dest_path)
+            # 1. Save CSV
+            shutil.copy2(source_csv_path, dest_csv_path)
 
-            print(f"Saved CSV to: {dest_path}")
-            return True, dest_path
+            # 2. Save Plot (Same name as CSV but .png)
+            plot_path = dest_csv_path.rsplit('.', 1)[0] + ".png"
+            fig.savefig(plot_path)
 
-        except FileNotFoundError as e:
-            return False, f"Source file not found: {e}"
-        except IOError as e:
-            return False, f"Failed to copy file: {e}"
+            print(f"Saved Data and Plot to: {dest_folder}")
+            return True, dest_csv_path
+
         except Exception as e:
-            return False, f"Unexpected error: {e}"
+            print(f"Save error: {e}")
+            return False, str(e)
         
-# ============================================================
-# THRESHOLD STUFF
-# ============================================================       
-    def get_threshold(self, participant_id):
-        """
-        Retrieves curent active threshold for a given participant.
-        Defaults to 0.0 if not set yet. 
-        """
-        data = self.participants_data.get(participant_id, [])
-        if isinstance(data, dict):
-            return data.get("active_threshold", 0.0)
-        return 0.0
-    
-    def update_threshold(self, participant_id, new_threshold):
-        """
-        Updates the participant's threshold in JSON log.
-        """
-        if participant_id not in self.participants_data:
-            self.participants_data[participant_id] = {"entries": [], "active_threshold": 0.0}
-
-        current_data = self.participants_data[participant_id]
-        
-        if isinstance(current_data, list):
-            self.participants_data[participant_id] = {
-                "entries": current_data,
-                "active_threshold": round(new_threshold, 4)
-            }
-        else:
-            self.participants_data[participant_id]["active_threshold"] = round(new_threshold, 4)
-
-        self.save_data()
-        print(f"Threshold for {participant_id} updated to: {new_threshold}")
-
-# ============================================================
-# MODULE TEST (Optional)
-# ============================================================
-if __name__ == "__main__":
-    """
-    Test the data manager independently.
-    Run: python participant_manager.py
-    """
-    print("Testing ParticipantDataManager...")
-
-    manager = ParticipantDataManager()
-
-    # Test validation
-    test_ids = ["01", "99", "00", "1", "100", "abc", ""]
-    for test_id in test_ids:
-        valid, msg = manager.validate_participant_id(test_id)
-        status = "v" if valid else "x"
-        print(f"{status} ID '{test_id}': {msg if msg else 'Valid'}")
-
-    # Test entry creation
-    print("\nCreating test entry...")
-    folder, sessions = manager.create_new_entry("01")
-    if folder:
-        print(f"Created: {folder}")
-        print(f"  Sessions: {sessions}")
-
-    print("\nTest complete!")

@@ -1,7 +1,5 @@
-#======================
-# Main GUI - Raspberry Pi Version (no API)
-# needs serial com for force, and network com for EMG
-#======================
+# Main Rehab GUI 
+
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk

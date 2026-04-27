@@ -1,3 +1,5 @@
+# Correlation test program (based off PIGUI.py, basis for main.py)
+
 import tkinter as tk
 import numpy as np
 import pandas as pd
@@ -147,14 +149,16 @@ class ReflexApp:
     def analysis(self, emg_df, force_df):
         print("Processing data...")
         try:
+            # Processing EMG data
             emg_fs = 2148.148   # (Hz) Sampling frequency of emg sensors
             emg_val = emg_df["value"].to_numpy(dtype=float)
             rect_emg = np.abs(emg_val)
             emg_envelope = signal.savgol_filter(rect_emg, window_length=int(0.05*emg_fs)|1, polyorder=3) #lessened window length from .2 to .05
-
             emg_time = emg_df['time'].to_numpy(dtype=float) * 1000 
             emg_time = np.arange(len(emg_time)) * 1000 / emg_fs # (ms) There was an issue with time stamps. This fixes it
+            envelope_time = np.arange(len(emg_envelope)) * 1000 / 2148.148
 
+            # Processing Force Data
             f_val_raw = force_df['force_V'].to_numpy(dtype=float)
             force_val = (f_val_raw / (0.009 * 51))
             force_val = force_val - np.mean(force_val)
@@ -171,12 +175,14 @@ class ReflexApp:
             sample_num = len(force_time)
             force_interval = 1/2148
 
+            # Force FFT
             yf = fft(force_val)
             xf = fftfreq(sample_num, force_interval)
 
+            # File Name based on time stamp
             fname = f"reflex_trial_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            envelope_time = np.arange(len(emg_envelope)) * 1000 / 2148.148
 
+            # Compiling relevant data to a single data frame
             combined_df = pd.DataFrame({
                 'EMG_time_ms': pd.Series(emg_time),
                 'EMG_value': pd.Series(emg_val),
@@ -187,8 +193,12 @@ class ReflexApp:
                 'EMG_Envelope': pd.Series(emg_envelope)
             })
             
+            # Saving data frame to csv
             combined_df.to_csv(fname, index=False)
+
+            # Sending data to plotter
             self.plotter(combined_df, emg_envelope, xf, yf, lp_filtered_force)
+            
             print(f"SUCCESS: Data saved to {fname}")
         except Exception as e:
             print(f"x Analysis Error: {e}")

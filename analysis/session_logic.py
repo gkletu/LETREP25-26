@@ -120,14 +120,14 @@ class SessionManager:
         # motor.shutdown_node()
 
         # ANALYSIS & SAVING
+        # fig, axs = processors._debug_plot(combined_df, emg_envelope, xf, yf, filtered_force)
         results = processors.analize_trial(raw_emg, self.raw_force, self.active_threshold)
-        self.session_maxes.append(results["max_emg"])
-        self.success_history.append(results["is_success"])
+        #self.session_maxes.append(results["max_emg"])
+        #self.success_history.append(results["is_success"])
         
         self._temp_save_and_move(   #this needs to be passed the processed data from processors
             self.p_id, self.entry_idx, self.sess_type, 
-            self.current_trial_num, raw_emg, self.raw_force, results
-        )
+            self.current_trial_num, raw_emg, self.raw_force, results)
         
         # UI UPDATE
         successes = self.success_history.count(True)
@@ -232,10 +232,10 @@ class SessionManager:
             if hasattr(data, "tolist"): return data.tolist()
             return list(data) if data is not None else []
 
-        f_emg = ensure_list(results.get("emg_filtered"))
-        t_emg = ensure_list(results.get("emg_timestamps"))
-        f_force = ensure_list(results.get("force_filtered"))
-        t_force = ensure_list(results.get("force_timestamps"))
+        f_emg = ensure_list(results.get("EMG_Envelope"))
+        t_emg = ensure_list(results.get("ENVELOPE_time_ms"))
+        f_force = ensure_list(results.get("Forse_LPF"))
+        t_force = ensure_list(results.get("FORCE_time_ms"))
         raw_force_v = ensure_list(force['force_V']) if not force.empty else []
         # Ensure raw emg (passed as 'emg') is also handled
         raw_emg = emg["value"].to_numpy(dtype = float)
@@ -246,16 +246,16 @@ class SessionManager:
 
             # Write Metadata
             writer.writerow(["Trial: ", trial_num])
-            writer.writerow(["Threshold: ", float(self.active_threshold)])
-            writer.writerow(["Maximum EMG: ", float(results.get("max_emg", 0))])   
-            writer.writerow(["Success: ", bool(results.get("is_success"))])                   
+            #writer.writerow(["Threshold: ", float(self.active_threshold)])
+            #writer.writerow(["Maximum EMG: ", float(results.get("max_emg", 0))])   
+            #writer.writerow(["Success: ", bool(results.get("is_success"))])                   
             writer.writerow([]) 
             
             # Write Headers
-            writer.writerow(["EMG Time","Raw EMG","Filtered EMG","Force Time","Raw Force (V)","Filtered Force (N)"]) 
+            writer.writerow(["EMG Time","Filtered EMG","Force Time","Filtered Force (N)"]) 
             
             # Zip and Write Rows
-            rows = zip_longest(t_emg, raw_emg, f_emg, t_force, raw_force_v, f_force, fillvalue="")
+            rows = zip_longest(t_emg, f_emg, t_force,  f_force, fillvalue="")
             writer.writerows(rows) # Use writerows for the zipped iterator
 
         self.dm.save_csv_to_session(p_id, entry_idx, sess_type, temp_name)
