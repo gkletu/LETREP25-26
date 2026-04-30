@@ -129,12 +129,12 @@ class ReflexApp:
         self.entry_label.pack(pady=(0, 20))
 
         button_configs = [
-            ("START TRIAL", COLORS['success'], self.start_trial, True, COLORS["success_active"]),
-            ("CHANGE PARTICIPANT", COLORS['blue_btn'], self.open_login, False, COLORS["blue_active"]),
-            ("SELECT ENTRY", COLORS['blue_btn'], self.change_entry, False, COLORS["blue_active"]),
-            ("PAIR SENSORS", COLORS['purple_btn'], lambda: delsys.pair_sensors(), False, COLORS["purple_active"]),
-            ("SCAN SENSORS", COLORS['purple_btn'], lambda: delsys.scan_sensors(), False, COLORS["purple_active"]),
-            ("EXIT APP", COLORS['danger'], self.exit_application, True, COLORS["danger_active"])
+            ("START TRIAL", COLORS['success'], self.start_trial, True),
+            ("CHANGE PARTICIPANT", COLORS['blue_btn'], self.open_login, False),
+            ("SELECT ENTRY", COLORS['blue_btn'], self.change_entry, False),
+            ("PAIR SENSORS", COLORS['purple_btn'], lambda: delsys.pair_sensors(), False),
+            ("SCAN SENSORS", COLORS['purple_btn'], lambda: delsys.scan_sensors(), False),
+            ("EXIT APP", COLORS['danger'], self.exit_application, True)
         ]
 
         for text, color, cmd, is_primary in button_configs:
@@ -168,11 +168,12 @@ class ReflexApp:
             # Use self.root.after to call GUI-related start_collect safely
             self.root.after(0, delsys.start_collect)
             self.is_collecting = True
+            time.sleep(.3)
 
             # 3. Pre-load movement
-            self.motor.acceleration_velocity_set(500, 20)
-            self.motor.move_speed(20)
-            time.sleep(0.75)
+            self.motor.acceleration_velocity_set(500, 30)
+            self.motor.move_speed(30)
+            time.sleep(.75)
 
             # 4. Reflex Induction (Quick Strike)
             print("--- Triggering Reflex ---")
@@ -318,7 +319,7 @@ class ReflexApp:
             f_rms = self.calculate_rms(f_norm, window_size=int(0.05 * emg_fs))
 
             # 4. Update the LIVE GUI
-            self.update_plot_analysis(emg_time, emg_rms, f_time, f_rms)
+            self.update_plot_analysis(emg_time, emg_env, f_time, f_rms)
 
             # 5. Generate Summary (Using the explicit arrays)
             self.generate_summary_report(
@@ -346,10 +347,10 @@ class ReflexApp:
         if len(data) == 0: return np.array([])
         return np.sqrt(signal.convolve(data**2, np.ones(window_size)/window_size, mode='same'))
 
-    def update_plot_analysis(self, emg_time, emg_rms, force_time, force_rms):
+    def update_plot_analysis(self, emg_time, emg_env, force_time, force_rms):
         self.ax1.clear(); self.ax2.clear()
-        self.ax1.plot(emg_time, emg_rms, color='red', linewidth=1.5)
-        self.ax1.set_title("EMG RMS Envelope (V)")
+        self.ax1.plot(emg_time, emg_env, color='red', linewidth=1.5)
+        self.ax1.set_title("EMG Envelope (mV)")
         self.ax1.grid(True, linestyle='--', alpha=0.6)
         self.ax1.set_ylabel("Amplitude (mV)")
 
@@ -358,9 +359,11 @@ class ReflexApp:
         self.ax2.grid(True, linestyle='--', alpha=0.6)
         self.ax2.set_ylabel("Amplitude (N)")
         self.ax2.set_xlabel("time (ms)")
-        
+
         max_t = max(emg_time[-1], force_time[-1]) if len(emg_time)>0 else 4000
+
         self.ax1.set_xlim(0, max_t); self.ax2.set_xlim(0, max_t)
+
         self.fig.tight_layout(); self.canvas.draw()
 
     def generate_summary_report(self, t_emg, emg_raw, emg_env, emg_rms, t_f, f_raw, f_env, f_rms, base_path, base_name):

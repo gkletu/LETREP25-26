@@ -48,7 +48,7 @@ class ParticipantLoginPopup:
                        value="new", bg=COLORS['bg_main'], fg="white", font=FONTS['label_1'],
                        selectcolor=COLORS['bg_raised'], activebackground=COLORS['bg_main']).pack(anchor='w', pady=5)
         
-        tk.Radiobutton(type_frame, text="Use Latest Existing", variable=self.entry_type_var,
+        tk.Radiobutton(type_frame, text="Use Existing", variable=self.entry_type_var,
                        value="existing", bg=COLORS['bg_main'], fg="white", font=FONTS['label_1'],
                        selectcolor=COLORS['bg_raised'], activebackground=COLORS['bg_main']).pack(anchor='w', pady=5)
 
@@ -136,7 +136,7 @@ class ParticipantLoginPopup:
         lb.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
         for i in range(len(entries)):
-            lb.insert(tk.END, f"Entry {i}")
+            lb.insert(tk.END, f"Entry {i+1}")
 
         def confirm_pick():
             selection = lb.curselection()
@@ -175,7 +175,7 @@ class EntryPickerPopup:
         # Load existing entries
         entries = data_manager.get_participant_entries(participant_id)
         for i in range(len(entries)):
-            self.lb.insert(tk.END, f"Entry {i}")
+            self.lb.insert(tk.END, f"Entry {i+1}")
 
         def confirm():
             selection = self.lb.curselection()
