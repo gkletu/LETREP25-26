@@ -1,0 +1,13 @@
+{
+    "06": {
+        "entries": [
+            {
+                "entry_number": 1,
+                "created": "2026-05-02T15:43:07.609490",
+                "entry_folder": "Participant_Data/Participant_06/entry1",
+                "status": "active"
+            }
+        ],
+        "active_threshold": 0.0
+    }
+}
